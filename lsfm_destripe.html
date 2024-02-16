@@ -1,0 +1,640 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>lsfm_destripe package &mdash; LSFM DeStripe PyTorch 0.0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=fa44fd50" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=d45e8c67"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="lsfm_destripe.bin package" href="lsfm_destripe.bin.html" />
+    <link rel="prev" title="lsfm_destripe" href="modules.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            LSFM DeStripe PyTorch
+          </a>
+              <div class="version">
+                0.0.1
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="index.html">Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#stable-release">Stable release</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#from-sources">From sources</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">Package modules</a><ul class="current">
+<li class="toctree-l2 current"><a class="current reference internal" href="#">lsfm_destripe package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="lsfm_destripe.bin.html">lsfm_destripe.bin package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-lsfm_destripe.core">lsfm_destripe.core module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#lsfm_destripe.core.DeStripe"><code class="docutils literal notranslate"><span class="pre">DeStripe</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-lsfm_destripe.network">lsfm_destripe.network module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#lsfm_destripe.network.BoxFilter"><code class="docutils literal notranslate"><span class="pre">BoxFilter</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lsfm_destripe.network.DeStripeModel"><code class="docutils literal notranslate"><span class="pre">DeStripeModel</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lsfm_destripe.network.GuidedFilter"><code class="docutils literal notranslate"><span class="pre">GuidedFilter</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lsfm_destripe.network.GuidedFilterHR"><code class="docutils literal notranslate"><span class="pre">GuidedFilterHR</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lsfm_destripe.network.GuidedFilterHR_fast"><code class="docutils literal notranslate"><span class="pre">GuidedFilterHR_fast</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lsfm_destripe.network.GuidedFilterLoss"><code class="docutils literal notranslate"><span class="pre">GuidedFilterLoss</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lsfm_destripe.network.Loss"><code class="docutils literal notranslate"><span class="pre">Loss</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lsfm_destripe.network.ResLearning"><code class="docutils literal notranslate"><span class="pre">ResLearning</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lsfm_destripe.network.complexReLU"><code class="docutils literal notranslate"><span class="pre">complexReLU</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-lsfm_destripe.utils">lsfm_destripe.utils module</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#lsfm_destripe.utils.NeighborSampling"><code class="docutils literal notranslate"><span class="pre">NeighborSampling()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lsfm_destripe.utils.WedgeMask"><code class="docutils literal notranslate"><span class="pre">WedgeMask()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#lsfm_destripe.utils.prepare_aux"><code class="docutils literal notranslate"><span class="pre">prepare_aux()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#module-lsfm_destripe">Module contents</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#lsfm_destripe.get_module_version"><code class="docutils literal notranslate"><span class="pre">get_module_version()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#get-started">Get Started!</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#deploying">Deploying</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">LSFM DeStripe PyTorch</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="modules.html">lsfm_destripe</a></li>
+      <li class="breadcrumb-item active">lsfm_destripe package</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/lsfm_destripe.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul><div class="rst-breadcrumbs-buttons" role="navigation" aria-label="Sequential page navigation">
+        <a href="modules.html" class="btn btn-neutral float-left" title="lsfm_destripe" accesskey="p"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="lsfm_destripe.bin.html" class="btn btn-neutral float-right" title="lsfm_destripe.bin package" accesskey="n">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+  </div>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="lsfm-destripe-package">
+<h1>lsfm_destripe package<a class="headerlink" href="#lsfm-destripe-package" title="Link to this heading"></a></h1>
+<section id="subpackages">
+<h2>Subpackages<a class="headerlink" href="#subpackages" title="Link to this heading"></a></h2>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="lsfm_destripe.bin.html">lsfm_destripe.bin package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="lsfm_destripe.bin.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lsfm_destripe.bin.html#module-lsfm_destripe.bin.run_destripe">lsfm_destripe.bin.run_destripe module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="lsfm_destripe.bin.html#lsfm_destripe.bin.run_destripe.Args"><code class="docutils literal notranslate"><span class="pre">Args</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="lsfm_destripe.bin.html#lsfm_destripe.bin.run_destripe.Args.DEFAULT_FIRST"><code class="docutils literal notranslate"><span class="pre">Args.DEFAULT_FIRST</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="lsfm_destripe.bin.html#lsfm_destripe.bin.run_destripe.Args.DEFAULT_SECOND"><code class="docutils literal notranslate"><span class="pre">Args.DEFAULT_SECOND</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="lsfm_destripe.bin.html#lsfm_destripe.bin.run_destripe.main"><code class="docutils literal notranslate"><span class="pre">main()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="lsfm_destripe.bin.html#module-lsfm_destripe.bin">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Link to this heading"></a></h2>
+</section>
+<section id="module-lsfm_destripe.core">
+<span id="lsfm-destripe-core-module"></span><h2>lsfm_destripe.core module<a class="headerlink" href="#module-lsfm_destripe.core" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="lsfm_destripe.core.DeStripe">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lsfm_destripe.core.</span></span><span class="sig-name descname"><span class="pre">DeStripe</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">isVertical</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angleOffset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">[0]</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">losseps</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">resampleRatio</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">KGF</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">29</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">KGFh</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">29</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">HKs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.5</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling_in_MSEloss</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">2</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">isotropic_hessian</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lambda_tv</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lambda_hessian</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">1</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inc</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n_epochs</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">300</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">deg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">29</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Nneighbors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fast_GF</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">require_global_correction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">Path</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/core.html#DeStripe"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.core.DeStripe" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Main class for De-striping</p>
+<section id="parameters">
+<h3>Parameters:<a class="headerlink" href="#parameters" title="Link to this heading"></a></h3>
+<dl class="simple">
+<dt>data_path: str or Path</dt><dd><p>file path for volume input</p>
+</dd>
+<dt>isVertical: boolean</dt><dd><p>direction of the stripes. True by default</p>
+</dd>
+<dt>angleOffset: List</dt><dd><p>a list of angles in degree, data range for each angle is
+[-90, 90]. For example [-10, 0, 10] for ultramicroscope.
+[0] by default</p>
+</dd>
+<dt>losseps: float</dt><dd><p>eps in loss. data range [0.1, inf). 10 by default</p>
+</dd>
+<dt>qr: float</dt><dd><p>TODO (add more details)
+a threhold. data range [0.5, inf). 0.5 by default</p>
+</dd>
+<dt>resampleRatio: int</dt><dd><p>downsample ratio, data range [1, inf), 2 by default</p>
+</dd>
+<dt>KGF: int</dt><dd><p>kernel size for guided filter during training. must be odd. 29 by default</p>
+</dd>
+<dt>KGFh: int</dt><dd><p>TODO (add more details)
+kernel size for guided filter during inference. must be odd. 29 by default</p>
+</dd>
+<dt>HKs: float</dt><dd><p>sigma to generate hessian kernel. data range [0.5, 1.5]. 0.5 by default</p>
+</dd>
+<dt>sampling_in_MSEloss: int</dt><dd><p>TODO (add more details)
+downsampling when calculating MSE. data range [1, inf). 2 by default</p>
+</dd>
+<dt>isotropic_hessian: boolean</dt><dd><p>True by default</p>
+</dd>
+<dt>lambda_tv: float</dt><dd><p>trade-off parameter of total variation in loss. data range (0, inf).
+1 by default</p>
+</dd>
+<dt>lambda_hessian: float</dt><dd><p>trade-off parameter of hessian in loss. data range (0, inf). 1 by default</p>
+</dd>
+<dt>inc: int</dt><dd><p>latent neuron numbers in NN. power of 2. 16 by default</p>
+</dd>
+<dt>n_epochs: int</dt><dd><p>total epochs for training. data range [1, inf). 300 by default</p>
+</dd>
+<dt>deg: float</dt><dd><p>angle in degree to generate wedge-like mask. data range (0, 90).
+29 by default</p>
+</dd>
+<dt>Nneighbors: int</dt><dd><p>data range [1, 32], 16 by default</p>
+</dd>
+<dt>fast_GF: boolean</dt><dd><p>methods used for composing high-res result, False by default</p>
+</dd>
+<dt>require_global_correction: boolean</dt><dd><p>Whether to run additional correction for whole z-stack after processing
+individual slices. True by default</p>
+</dd>
+<dt>mask_name: str or Path</dt><dd><p>path to mask file (if applicable). None by default</p>
+</dd>
+</dl>
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.core.DeStripe.train">
+<span class="sig-name descname"><span class="pre">train</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/core.html#DeStripe.train"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.core.DeStripe.train" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.core.DeStripe.train_full_arr">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">train_full_arr</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">img_arr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mask_arr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_vertical</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'CPU'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">require_global_correction</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/core.html#DeStripe.train_full_arr"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.core.DeStripe.train_full_arr" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.core.DeStripe.train_one_slice">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">train_one_slice</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">arr_O</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arr_map</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">ndarray</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_vertical</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">qr</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">shape_param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_param</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Dict</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cpu'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/core.html#DeStripe.train_one_slice"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.core.DeStripe.train_one_slice" title="Link to this definition"></a></dt>
+<dd><p>train the network on a single 2D slice</p>
+<section id="id1">
+<h4>Parameters:<a class="headerlink" href="#id1" title="Link to this heading"></a></h4>
+<dl class="simple">
+<dt>arr_O: ndarray</dt><dd><p>the input slice</p>
+</dd>
+<dt>arr_map: ndarray</dt><dd><p>optional mask</p>
+</dd>
+<dt>is_vertical: book</dt><dd><p>whether the stripe is vertical</p>
+</dd>
+<dt>qr: float or a list of float</dt><dd><p>threshold TODO (add more info)</p>
+</dd>
+<dt>shape_param: Dict</dt><dd><p>parameters related to shape</p>
+</dd>
+<dt>train_param: Dict</dt><dd><p>parameters related to training</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+</section>
+</dd></dl>
+
+</section>
+<section id="module-lsfm_destripe.network">
+<span id="lsfm-destripe-network-module"></span><h2>lsfm_destripe.network module<a class="headerlink" href="#module-lsfm_destripe.network" title="Link to this heading"></a></h2>
+<dl class="py class">
+<dt class="sig sig-object py" id="lsfm_destripe.network.BoxFilter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lsfm_destripe.network.</span></span><span class="sig-name descname"><span class="pre">BoxFilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Angle</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#BoxFilter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.BoxFilter" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>Initialize internal Module state, shared by both nn.Module and ScriptModule.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.BoxFilter.diff_x">
+<span class="sig-name descname"><span class="pre">diff_x</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#BoxFilter.diff_x"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.BoxFilter.diff_x" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.BoxFilter.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#BoxFilter.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.BoxFilter.forward" title="Link to this definition"></a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="lsfm_destripe.network.BoxFilter.training">
+<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#lsfm_destripe.network.BoxFilter.training" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lsfm_destripe.network.DeStripeModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lsfm_destripe.network.</span></span><span class="sig-name descname"><span class="pre">DeStripeModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Angle</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hier_mask</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hier_ind</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">NI</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">KS</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Nneighbors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">inc</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cuda'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#DeStripeModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.DeStripeModel" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>Initialize internal Module state, shared by both nn.Module and ScriptModule.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.DeStripeModel.fftn">
+<span class="sig-name descname"><span class="pre">fftn</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#DeStripeModel.fftn"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.DeStripeModel.fftn" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.DeStripeModel.fftnt">
+<span class="sig-name descname"><span class="pre">fftnt</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">row</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">col</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#DeStripeModel.fftnt"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.DeStripeModel.fftnt" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.DeStripeModel.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Xd</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Xf</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#DeStripeModel.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.DeStripeModel.forward" title="Link to this definition"></a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.DeStripeModel.fourierResult">
+<span class="sig-name descname"><span class="pre">fourierResult</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">z</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">mean</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#DeStripeModel.fourierResult"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.DeStripeModel.fourierResult" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.DeStripeModel.rotatableKernel">
+<span class="sig-name descname"><span class="pre">rotatableKernel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Wsize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#DeStripeModel.rotatableKernel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.DeStripeModel.rotatableKernel" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="lsfm_destripe.network.DeStripeModel.training">
+<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#lsfm_destripe.network.DeStripeModel.training" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilter">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lsfm_destripe.network.</span></span><span class="sig-name descname"><span class="pre">GuidedFilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Angle</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cuda'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-09</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#GuidedFilter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.GuidedFilter" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>Initialize internal Module state, shared by both nn.Module and ScriptModule.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilter.boxfilter">
+<span class="sig-name descname"><span class="pre">boxfilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#GuidedFilter.boxfilter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.GuidedFilter.boxfilter" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilter.training">
+<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#lsfm_destripe.network.GuidedFilter.training" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilterHR">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lsfm_destripe.network.</span></span><span class="sig-name descname"><span class="pre">GuidedFilterHR</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rX</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rY</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Angle</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">m</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-09</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#GuidedFilterHR"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.GuidedFilterHR" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>Initialize internal Module state, shared by both nn.Module and ScriptModule.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilterHR.boxfilter">
+<span class="sig-name descname"><span class="pre">boxfilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">weight</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pr</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#GuidedFilterHR.boxfilter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.GuidedFilterHR.boxfilter" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilterHR.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">X</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">r</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#GuidedFilterHR.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.GuidedFilterHR.forward" title="Link to this definition"></a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilterHR.generateWeight">
+<span class="sig-name descname"><span class="pre">generateWeight</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">pr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#GuidedFilterHR.generateWeight"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.GuidedFilterHR.generateWeight" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilterHR.sgolay2dkernel">
+<span class="sig-name descname"><span class="pre">sgolay2dkernel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">window_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">order</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#GuidedFilterHR.sgolay2dkernel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.GuidedFilterHR.sgolay2dkernel" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilterHR.training">
+<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#lsfm_destripe.network.GuidedFilterHR.training" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilterHR_fast">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lsfm_destripe.network.</span></span><span class="sig-name descname"><span class="pre">GuidedFilterHR_fast</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angleList</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-09</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#GuidedFilterHR_fast"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.GuidedFilterHR_fast" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>Initialize internal Module state, shared by both nn.Module and ScriptModule.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilterHR_fast.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">xx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">yy</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">hX</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#GuidedFilterHR_fast.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.GuidedFilterHR_fast.forward" title="Link to this definition"></a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilterHR_fast.training">
+<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#lsfm_destripe.network.GuidedFilterHR_fast.training" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilterLoss">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lsfm_destripe.network.</span></span><span class="sig-name descname"><span class="pre">GuidedFilterLoss</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rx</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ry</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eps</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">1e-09</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#GuidedFilterLoss"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.GuidedFilterLoss" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>Initialize internal Module state, shared by both nn.Module and ScriptModule.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilterLoss.boxfilter">
+<span class="sig-name descname"><span class="pre">boxfilter</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#GuidedFilterLoss.boxfilter"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.GuidedFilterLoss.boxfilter" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilterLoss.diff_x">
+<span class="sig-name descname"><span class="pre">diff_x</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">r</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#GuidedFilterLoss.diff_x"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.GuidedFilterLoss.diff_x" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilterLoss.diff_y">
+<span class="sig-name descname"><span class="pre">diff_y</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">r</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#GuidedFilterLoss.diff_y"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.GuidedFilterLoss.diff_y" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilterLoss.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#GuidedFilterLoss.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.GuidedFilterLoss.forward" title="Link to this definition"></a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="lsfm_destripe.network.GuidedFilterLoss.training">
+<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#lsfm_destripe.network.GuidedFilterLoss.training" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lsfm_destripe.network.Loss">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lsfm_destripe.network.</span></span><span class="sig-name descname"><span class="pre">Loss</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">HKs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lambda_tv</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lambda_hessian</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sampling</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">f</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">md</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nd</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Angle</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">KGF</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">losseps</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">device</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#Loss"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.Loss" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>Initialize internal Module state, shared by both nn.Module and ScriptModule.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.Loss.HessianRegularizationLoss">
+<span class="sig-name descname"><span class="pre">HessianRegularizationLoss</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#Loss.HessianRegularizationLoss"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.Loss.HessianRegularizationLoss" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.Loss.TotalVariation">
+<span class="sig-name descname"><span class="pre">TotalVariation</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">target</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#Loss.TotalVariation"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.Loss.TotalVariation" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.Loss.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">outputGNN</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outputLR</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">smoothedTarget</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">targets</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">map</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#Loss.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.Loss.forward" title="Link to this definition"></a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.Loss.generateHessianKernel">
+<span class="sig-name descname"><span class="pre">generateHessianKernel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Sigma</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#Loss.generateHessianKernel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.Loss.generateHessianKernel" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.Loss.rotatableKernel">
+<span class="sig-name descname"><span class="pre">rotatableKernel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">Wsize</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sigma</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#Loss.rotatableKernel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.Loss.rotatableKernel" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="lsfm_destripe.network.Loss.training">
+<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#lsfm_destripe.network.Loss.training" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lsfm_destripe.network.ResLearning">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lsfm_destripe.network.</span></span><span class="sig-name descname"><span class="pre">ResLearning</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inc</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">outc</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#ResLearning"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.ResLearning" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>Initialize internal Module state, shared by both nn.Module and ScriptModule.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="lsfm_destripe.network.ResLearning.training">
+<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#lsfm_destripe.network.ResLearning.training" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="lsfm_destripe.network.complexReLU">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lsfm_destripe.network.</span></span><span class="sig-name descname"><span class="pre">complexReLU</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">inplace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#complexReLU"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.complexReLU" title="Link to this definition"></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code></p>
+<p>Initialize internal Module state, shared by both nn.Module and ScriptModule.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="lsfm_destripe.network.complexReLU.forward">
+<span class="sig-name descname"><span class="pre">forward</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/network.html#complexReLU.forward"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.network.complexReLU.forward" title="Link to this definition"></a></dt>
+<dd><p>Define the computation performed at every call.</p>
+<p>Should be overridden by all subclasses.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Although the recipe for forward pass needs to be defined within
+this function, one should call the <code class="xref py py-class docutils literal notranslate"><span class="pre">Module</span></code> instance afterwards
+instead of this since the former takes care of running the
+registered hooks while the latter silently ignores them.</p>
+</div>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="lsfm_destripe.network.complexReLU.training">
+<span class="sig-name descname"><span class="pre">training</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><a class="headerlink" href="#lsfm_destripe.network.complexReLU.training" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</section>
+<section id="module-lsfm_destripe.utils">
+<span id="lsfm-destripe-utils-module"></span><h2>lsfm_destripe.utils module<a class="headerlink" href="#module-lsfm_destripe.utils" title="Link to this heading"></a></h2>
+<dl class="py function">
+<dt class="sig sig-object py" id="lsfm_destripe.utils.NeighborSampling">
+<span class="sig-prename descclassname"><span class="pre">lsfm_destripe.utils.</span></span><span class="sig-name descname"><span class="pre">NeighborSampling</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">m</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">n</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">k_neighbor</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">16</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/utils.html#NeighborSampling"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.utils.NeighborSampling" title="Link to this definition"></a></dt>
+<dd><p>Do neighbor sampling</p>
+<section id="id2">
+<h3>Parameters:<a class="headerlink" href="#id2" title="Link to this heading"></a></h3>
+<dl class="simple">
+<dt>m: int</dt><dd><p>size of neighbor along X dim</p>
+</dd>
+<dt>n: int</dt><dd><p>size of neighbor along Y dim</p>
+</dd>
+<dt>k_neigher: int, data range [1, 32], 16 by default</dt><dd><p>number of neighboring points</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="lsfm_destripe.utils.WedgeMask">
+<span class="sig-prename descclassname"><span class="pre">lsfm_destripe.utils.</span></span><span class="sig-name descname"><span class="pre">WedgeMask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">md</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nd</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Angle</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">deg</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/utils.html#WedgeMask"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.utils.WedgeMask" title="Link to this definition"></a></dt>
+<dd><p>Add docstring here</p>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="lsfm_destripe.utils.prepare_aux">
+<span class="sig-prename descclassname"><span class="pre">lsfm_destripe.utils.</span></span><span class="sig-name descname"><span class="pre">prepare_aux</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">md</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">nd</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">is_vertical</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">angleOffset</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">deg</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">Nneighbors</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">16</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe/utils.html#prepare_aux"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.utils.prepare_aux" title="Link to this definition"></a></dt>
+<dd><p>the function preparing auxillary variables for training based on image shape</p>
+<section id="id3">
+<h3>Parameters:<a class="headerlink" href="#id3" title="Link to this heading"></a></h3>
+<dl class="simple">
+<dt>md: int</dt><dd><p>sampling nbr size along Y</p>
+</dd>
+<dt>nd: int</dt><dd><p>sampling nbr size along X</p>
+</dd>
+<dt>is_verticel: book</dt><dd><p>if the stripes are vertical</p>
+</dd>
+<dt>angleOffset: TODO</dt><dd><p>TODO</p>
+</dd>
+<dt>deg: float</dt><dd><p>TODO</p>
+</dd>
+<dt>Nneighbors: int</dt><dd><p>TODO</p>
+</dd>
+</dl>
+</section>
+<section id="returns">
+<h3>Returns:<a class="headerlink" href="#returns" title="Link to this heading"></a></h3>
+<dl class="simple">
+<dt>NI: ndarray</dt><dd><p>TODO</p>
+</dd>
+<dt>hier_mask: ndarray</dt><dd><p>TODO</p>
+</dd>
+<dt>hier_ind: ndarray</dt><dd><p>TODO</p>
+</dd>
+</dl>
+</section>
+</dd></dl>
+
+</section>
+<section id="module-lsfm_destripe">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-lsfm_destripe" title="Link to this heading"></a></h2>
+<p>Top-level package for LSFM DeStripe PyTorch.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="lsfm_destripe.get_module_version">
+<span class="sig-prename descclassname"><span class="pre">lsfm_destripe.</span></span><span class="sig-name descname"><span class="pre">get_module_version</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/lsfm_destripe.html#get_module_version"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsfm_destripe.get_module_version" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2024, Jianxu Chen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,45 @@
+lsfm\_destripe package
+======================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   lsfm_destripe.bin
+
+Submodules
+----------
+
+lsfm\_destripe.core module
+--------------------------
+
+.. automodule:: lsfm_destripe.core
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+lsfm\_destripe.network module
+-----------------------------
+
+.. automodule:: lsfm_destripe.network
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+lsfm\_destripe.utils module
+---------------------------
+
+.. automodule:: lsfm_destripe.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: lsfm_destripe
+   :members:
+   :undoc-members:
+   :show-inheritance:

@@ -1,0 +1,21 @@
+lsfm\_destripe.bin package
+==========================
+
+Submodules
+----------
+
+lsfm\_destripe.bin.run\_destripe module
+---------------------------------------
+
+.. automodule:: lsfm_destripe.bin.run_destripe
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Module contents
+---------------
+
+.. automodule:: lsfm_destripe.bin
+   :members:
+   :undoc-members:
+   :show-inheritance:
