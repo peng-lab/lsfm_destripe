@@ -50,26 +50,23 @@ class Args(argparse.Namespace):
             action="version",
             version="%(prog)s " + get_module_version(),
         )
+
         p.add_argument(
-            "--input",
+            "--is_vertical",
             action="store",
-            dest="data_path",
-            type=str,
-        )
-        p.add_argument(
-            "--isVertical",
-            action="store",
-            dest="isVertical",
+            dest="is_vertical",
             default=True,
             type=bool,
         )
+
         p.add_argument(
-            "--dangleOffset",
+            "--angleOffset",
             action="store",
             dest="angleOffset",
             default=[0],
             type=list,
         )
+
         p.add_argument(
             "--losseps",
             action="store",
@@ -77,6 +74,7 @@ class Args(argparse.Namespace):
             default=10,
             type=float,
         )
+
         p.add_argument(
             "--qr",
             action="store",
@@ -84,6 +82,7 @@ class Args(argparse.Namespace):
             default=0.5,
             type=float,
         )
+
         p.add_argument(
             "--resampleRatio",
             action="store",
@@ -91,6 +90,7 @@ class Args(argparse.Namespace):
             default=2,
             type=int,
         )
+
         p.add_argument(
             "--KGF",
             action="store",
@@ -98,6 +98,7 @@ class Args(argparse.Namespace):
             default=29,
             type=int,
         )
+
         p.add_argument(
             "--KGFh",
             action="store",
@@ -105,6 +106,7 @@ class Args(argparse.Namespace):
             default=29,
             type=int,
         )
+
         p.add_argument(
             "--HKs",
             action="store",
@@ -112,6 +114,7 @@ class Args(argparse.Namespace):
             default=0.5,
             type=float,
         )
+
         p.add_argument(
             "-s" "--sampling_in_MSEloss",
             action="store",
@@ -119,6 +122,7 @@ class Args(argparse.Namespace):
             default=2,
             type=int,
         )
+
         p.add_argument(
             "--isotropic_hessian",
             action="store",
@@ -126,24 +130,29 @@ class Args(argparse.Namespace):
             default=True,
             type=bool,
         )
+
         p.add_argument(
             "--lambda_tv",
             action="store",
             dest="lambda_tv",
-            default=0.5,
+            default=1,
             type=float,
         )
+
         p.add_argument(
             "--lambda_hessian",
             action="store",
             dest="lambda_hessian",
-            default=0.5,
+            default=1,
             type=float,
         )
+
         p.add_argument("--inc", action="store", dest="inc", default=16, type=int)
+
         p.add_argument(
             "--n_epochs", action="store", dest="n_epochs", default=300, type=int
         )
+
         p.add_argument(
             "--deg",
             action="store",
@@ -151,6 +160,7 @@ class Args(argparse.Namespace):
             default=29,
             type=float,
         )
+
         p.add_argument(
             "--Nneighbors",
             action="store",
@@ -158,6 +168,7 @@ class Args(argparse.Namespace):
             default=16,
             type=int,
         )
+
         p.add_argument(
             "--fast_GF",
             action="store",
@@ -165,6 +176,7 @@ class Args(argparse.Namespace):
             default=False,
             type=bool,
         )
+
         p.add_argument(
             "--require_global_correction",
             action="store",
@@ -172,12 +184,23 @@ class Args(argparse.Namespace):
             default=True,
             type=bool,
         )
+
         p.add_argument(
-            "-m" "--mask_name",
+            "--GFr",
             action="store",
-            dest="mask_name",
-            type=str,
+            dest="GFr",
+            default=49,
+            type=int,
         )
+
+        p.add_argument(
+            "--Gaussianr",
+            action="store",
+            dest="Gaussianr",
+            default=49,
+            type=int,
+        )
+
         p.add_argument(
             "--debug",
             action="store_true",
@@ -195,11 +218,8 @@ def main():
         args = Args()
         dbg = args.debug
 
-        input = Path(args.input)
-        if input.is_file():
-            exe = DeStripe(
-                input,
-                args.isVertical,
+        exe = DeStripe(
+                args.is_vertical,
                 args.angleOffset,
                 args.losseps,
                 args.qr,
@@ -213,44 +233,20 @@ def main():
                 args.lambda_hessian,
                 args.inc,
                 args.n_epochs,
-                args.Nneighbors,
                 args.deg,
-                args.require_global_correction,
+                args.Nneighbors,
                 args.fast_GF,
-                args.mask_name,
+                args.require_global_correction,
+                args.GFr,
+                args.Gaussianr
             )
-            out = exe.train()
-            OmeTiffWriter.save(out, args.out_path, dim_order="ZYX")
-        elif input.is_dir():
-            filenames = sorted(input.glob("*"))
-            for fn in filenames:
-                exe = DeStripe(
-                    fn,
-                    args.isVertical,
-                    args.angleOffset,
-                    args.losseps,
-                    args.qr,
-                    args.resampleRatio,
-                    args.KGF,
-                    args.KGFh,
-                    args.HKs,
-                    args.sampling_in_MSELoss,
-                    args.isotropic_hessian,
-                    args.lambda_tv,
-                    args.lambda_hessian,
-                    args.inc,
-                    args.n_epochs,
-                    args.Nneighbors,
-                    args.deg,
-                    args.require_global_correction,
-                    args.fast_GF,
-                    args.mask_name,
-                )
-                out = exe.train()
-                OmeTiffWriter.save(
-                    out, Path(args.out_path) / f"{fn.stem}_out.tiff", dim_order="ZYX"
-                )
-
+        out = exe.train(args.X1, 
+                        args.X2,
+                        args.mask,
+                        args.dualX,
+                        args.boundary)
+        OmeTiffWriter.save(out, args.out_path, dim_order="ZYX")
+ 
     except Exception as e:
         log.error("=============================================")
         if dbg:
