@@ -41,7 +41,7 @@ requirements = [
     "scikit-image",
     "torch",
     "torchvision",
-    "aicsimageio==4.10.0",
+    "dask_image",
     "tqdm",
 ]
 
