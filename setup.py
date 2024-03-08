@@ -86,7 +86,7 @@ setup(
     test_suite="lsfm_destripe/tests",
     tests_require=test_requirements,
     extras_require=extra_requirements,
-    url="https://github.com/MMV-Lab/lsfm_destripe",
+    url="https://github.com/peng-lab/lsfm_destripe",
     # Do not edit this string manually, always use bumpversion
     # Details in CONTRIBUTING.rst
     version="0.0.1",
