@@ -32,13 +32,13 @@ You can either clone the public repository:
 
 .. code-block:: console
 
-    $ git clone git://github.com/MMV-Lab/lsfm_destripe
+    $ git clone git://github.com/peng-lab/lsfm_destripe
 
 Or download the `tarball`_:
 
 .. code-block:: console
 
-    $ curl  -OL https://github.com/MMV-Lab/lsfm_destripe/tarball/main
+    $ curl  -OL https://github.com/peng-lab/lsfm_destripe/tarball/main
 
 Once you have a copy of the source, you can install it with:
 
@@ -47,5 +47,5 @@ Once you have a copy of the source, you can install it with:
     $ python setup.py install
 
 
-.. _Github repo: https://github.com/MMV-Lab/lsfm_destripe
-.. _tarball: https://github.com/MMV-Lab/lsfm_destripe/tarball/main
+.. _Github repo: https://github.com/peng-lab/lsfm_destripe
+.. _tarball: https://github.com/peng-lab/lsfm_destripe/tarball/main
