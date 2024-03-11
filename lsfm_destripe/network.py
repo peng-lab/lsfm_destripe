@@ -8,17 +8,20 @@ import torch.nn as nn
 import torchvision
 import scipy
 
+
 def Cmplx_Xavier_Init(weight):
     n_in, n_out = weight.shape
     sigma = 1 / np.sqrt(n_in + n_out)
-    magnitudes = np.random.rayleigh(scale = sigma, size = (n_in, n_out))
-    phases = np.random.uniform(size = (n_in, n_out), low = -np.pi, high = np.pi)
-    return torch.from_numpy(magnitudes * np.exp(1.j * phases)).to(torch.cfloat)
+    magnitudes = np.random.rayleigh(scale=sigma, size=(n_in, n_out))
+    phases = np.random.uniform(size=(n_in, n_out), low=-np.pi, high=np.pi)
+    return torch.from_numpy(magnitudes * np.exp(1.0j * phases)).to(torch.cfloat)
+
 
 def CmplxRndUniform(bias, minval, maxval):
-    real_part = np.random.uniform(size = bias.shape, low = minval, high = maxval)
-    imag_part = np.random.uniform(size = bias.shape, low = minval, high = maxval)
-    return torch.from_numpy(real_part + 1j*imag_part).to(torch.cfloat)
+    real_part = np.random.uniform(size=bias.shape, low=minval, high=maxval)
+    imag_part = np.random.uniform(size=bias.shape, low=minval, high=maxval)
+    return torch.from_numpy(real_part + 1j * imag_part).to(torch.cfloat)
+
 
 class complexReLU(nn.Module):
     def __init__(self, inplace=False):
@@ -27,6 +30,7 @@ class complexReLU(nn.Module):
 
     def forward(self, x):
         return self.relu(x.real) + 1j * self.relu(x.imag)
+
 
 class ResLearning(nn.Module):
     def __init__(self, inc, outc):
@@ -42,17 +46,18 @@ class ResLearning(nn.Module):
         for m in self.children():
             if isinstance(m, nn.Sequential):
                 for n in m.children():
-                    if isinstance(n, nn.Linear): 
+                    if isinstance(n, nn.Linear):
                         n.weight.data = Cmplx_Xavier_Init(n.weight.data)
                         n.bias.data = CmplxRndUniform(n.bias.data, -0.001, 0.001)
             else:
-                if isinstance(m, nn.Linear): 
+                if isinstance(m, nn.Linear):
                     m.weight.data = Cmplx_Xavier_Init(m.weight.data)
                     m.bias.data = CmplxRndUniform(m.bias.data, -0.001, 0.001)
 
     def __call__(self, x):
         inx = self.f(x)
         return self.complexReLU(inx + self.linear(x))
+
 
 class GuidedFilter(nn.Module):
     def __init__(self, rx, ry, Angle, m, n, device="cuda", eps=1e-9):
@@ -112,8 +117,9 @@ class GuidedFilter(nn.Module):
             X = X + b
         return X
 
+
 class dual_view_fusion:
-    def __init__(self, r, m, n, resampleRatio, eps = 1, device = "cuda"):
+    def __init__(self, r, m, n, resampleRatio, eps=1, device="cuda"):
         self.r = r
         self.mask = torch.arange(m)[None, None, :, None].to(device)
         self.m, self.n = m, n
@@ -121,16 +127,16 @@ class dual_view_fusion:
         self.resampleRatio = resampleRatio
 
     def diff_x(self, input, r):
-        left   = input[:, :,         r:2 * r + 1]
-        middle = input[:, :, 2 * r + 1:         ] - input[:, :,           :-2 * r - 1]
-        right  = input[:, :,        -1:         ] - input[:, :, -2 * r - 1:    -r - 1]
+        left = input[:, :, r : 2 * r + 1]
+        middle = input[:, :, 2 * r + 1 :] - input[:, :, : -2 * r - 1]
+        right = input[:, :, -1:] - input[:, :, -2 * r - 1 : -r - 1]
         output = torch.cat([left, middle, right], 2)
         return output
 
     def diff_y(self, input, r):
-        left   = input[:, :, :,         r:2 * r + 1]
-        middle = input[:, :, :, 2 * r + 1:         ] - input[:, :, :,           :-2 * r - 1]
-        right  = input[:, :, :,        -1:         ] - input[:, :, :, -2 * r - 1:    -r - 1]
+        left = input[:, :, :, r : 2 * r + 1]
+        middle = input[:, :, :, 2 * r + 1 :] - input[:, :, :, : -2 * r - 1]
+        right = input[:, :, :, -1:] - input[:, :, :, -2 * r - 1 : -r - 1]
         output = torch.cat([left, middle, right], 3)
         return output
 
@@ -148,18 +154,31 @@ class dual_view_fusion:
         return A * x + b
 
     def __call__(self, x, boundary):
-        boundary = F.interpolate(boundary, size = (1, self.n), mode = "bilinear", align_corners = True) / self.resampleRatio
-        topSlice, bottomSlice = torch.split(x, split_size_or_sections = [1, 1], dim = 1)
+        boundary = (
+            F.interpolate(
+                boundary, size=(1, self.n), mode="bilinear", align_corners=True
+            )
+            / self.resampleRatio
+        )
+        topSlice, bottomSlice = torch.split(x, split_size_or_sections=[1, 1], dim=1)
         mask0, mask1 = self.mask > boundary, self.mask <= boundary
-        result0, result1 = self.guidedfilter(bottomSlice, mask0), self.guidedfilter(topSlice, mask1)
+        result0, result1 = self.guidedfilter(bottomSlice, mask0), self.guidedfilter(
+            topSlice, mask1
+        )
         t = result0 + result1 + 1e-3
         result0, result1 = result0 / t, result1 / t
         return result0 * bottomSlice + result1 * topSlice
 
-class identical_func:
-    def __init__(self, ): pass
 
-    def __call__(self, x, boundary): return x
+class identical_func:
+    def __init__(
+        self,
+    ):
+        pass
+
+    def __call__(self, x, boundary):
+        return x
+
 
 class DeStripeModel(nn.Module):
     def __init__(
@@ -172,9 +191,9 @@ class DeStripeModel(nn.Module):
         n,
         resampleRatio,
         KS,
-        inc=16, 
-        GFr=49, 
-        viewnum=1, 
+        inc=16,
+        GFr=49,
+        viewnum=1,
         device="cuda",
     ):
         super(DeStripeModel, self).__init__()
@@ -263,23 +282,27 @@ class DeStripeModel(nn.Module):
         )
         self.base = nn.Sequential(
             nn.Linear(1, inc),
-            nn.ReLU(inplace = True),
+            nn.ReLU(inplace=True),
             nn.Linear(inc, inc),
-            nn.ReLU(inplace = True),
+            nn.ReLU(inplace=True),
             nn.Linear(inc, viewnum),
         )
         self.viewnum = viewnum
         self.GuidedFilter = GuidedFilter(rx=KS, ry=0, m=m, n=n, Angle=Angle)
-        self.w = nn.Parameter(torch.rand(NI.shape)+1j*torch.rand(NI.shape))
+        self.w = nn.Parameter(torch.rand(NI.shape) + 1j * torch.rand(NI.shape))
         self.w.data = Cmplx_Xavier_Init(self.w.data)
         self.complexReLU = complexReLU()
         self.ainput = torch.ones(1, 1).to(device)
         self.inc = inc
-        self.fuse = dual_view_fusion(GFr, m, n, resampleRatio, device = device) if viewnum == 2 else identical_func()
+        self.fuse = (
+            dual_view_fusion(GFr, m, n, resampleRatio, device=device)
+            if viewnum == 2
+            else identical_func()
+        )
         for m in self.children():
             if isinstance(m, nn.Sequential):
                 for n in m.children():
-                    if isinstance(n, nn.Linear): 
+                    if isinstance(n, nn.Linear):
                         if n.weight.data.dtype is torch.cfloat:
                             n.weight.data = Cmplx_Xavier_Init(n.weight.data)
                             n.bias.data = CmplxRndUniform(n.bias.data, -0.001, 0.001)
@@ -322,16 +345,17 @@ class DeStripeModel(nn.Module):
                             torch.conj(torch.flip(z, [0])),
                         ),
                         0,
-                    ).reshape(1, self.m, -1, self.viewnum).permute(0, 3, 1, 2)
+                    )
+                    .reshape(1, self.m, -1, self.viewnum)
+                    .permute(0, 3, 1, 2)
                 )
             )
         )
 
     def forward(self, Xd, Xf, target, boundary):
-        aver = Xd.sum(dim = (2, 3))+1j*0
+        aver = Xd.sum(dim=(2, 3)) + 1j * 0
         Xf = self.p(Xf)
-        Xfcx = torch.sum(torch.einsum("knc,kn->knc", Xf[self.NI, :], 
-                                                     self.w), 0)
+        Xfcx = torch.sum(torch.einsum("knc,kn->knc", Xf[self.NI, :], self.w), 0)
         Xf_tvx = torch.cat((Xfcx, Xf[self.hier_mask, :]), 0)[self.hier_ind, :].reshape(
             len(self.Angle), -1, self.inc
         )
@@ -355,19 +379,28 @@ class DeStripeModel(nn.Module):
         outputLR = self.GuidedFilter(target, outputGNN)
         return outputGNNraw, outputGNN, outputLR
 
+
 class GuidedFilterLoss(nn.Module):
     def __init__(self, r, eps=1e-9):
         super(GuidedFilterLoss, self).__init__()
         self.r, self.eps = r, eps
 
     def diff_x(self, input, r):
-        return input[:, :, 2 * r + 1:, :] - input[:, :, :-2 * r - 1, :]
+        return input[:, :, 2 * r + 1 :, :] - input[:, :, : -2 * r - 1, :]
 
     def diff_y(self, input, r):
-        return input[:, :, :, 2 * r + 1:] - input[:, :, :, :-2 * r - 1]
+        return input[:, :, :, 2 * r + 1 :] - input[:, :, :, : -2 * r - 1]
 
     def boxfilter(self, input):
-        return self.diff_x(self.diff_y(F.pad(input, (self.r+1, self.r, self.r+1, self.r), mode = "constant").cumsum(3), self.r).cumsum(2), self.r)
+        return self.diff_x(
+            self.diff_y(
+                F.pad(
+                    input, (self.r + 1, self.r, self.r + 1, self.r), mode="constant"
+                ).cumsum(3),
+                self.r,
+            ).cumsum(2),
+            self.r,
+        )
 
     def forward(self, x, y):
         N = self.boxfilter(torch.ones_like(x))
@@ -379,13 +412,9 @@ class GuidedFilterLoss(nn.Module):
         A, b = self.boxfilter(A) / N, self.boxfilter(b) / N
         return A * x + b
 
+
 class Loss(nn.Module):
-    def __init__(
-        self,
-        train_params, 
-        shape_params,
-        device
-    ):
+    def __init__(self, train_params, shape_params, device):
         super(Loss, self).__init__()
         self.lambda_tv = train_params["lambda_tv"]
         self.lambda_hessian = train_params["lambda_hessian"]
@@ -398,52 +427,111 @@ class Loss(nn.Module):
         self.Dx = torch.from_numpy(
             np.array([[1, -1]], dtype=np.float32)[None, None]
         ).to(device)
-        if train_params["HKs"] > 0.5: self.DGaussxx, self.DGaussyy, self.DGaussxy = self.generateHessianKernel(train_params["HKs"])
-        else: self.DGaussxx, self.DGaussyy, self.DGaussxy = self.generateHessianKernel2(train_params["HKs"], shape_params)
+        if train_params["HKs"] > 0.5:
+            self.DGaussxx, self.DGaussyy, self.DGaussxy = self.generateHessianKernel(
+                train_params["HKs"]
+            )
+        else:
+            self.DGaussxx, self.DGaussyy, self.DGaussxy = self.generateHessianKernel2(
+                train_params["HKs"], shape_params
+            )
         self.DGaussxx, self.DGaussyy, self.DGaussxy = (
             self.DGaussxx.to(device),
             self.DGaussyy.to(device),
             self.DGaussxy.to(device),
         )
-        self.GuidedFilterLoss = GuidedFilterLoss(r = train_params["KGF"], eps = train_params["losseps"])
+        self.GuidedFilterLoss = GuidedFilterLoss(
+            r=train_params["KGF"], eps=train_params["losseps"]
+        )
 
     def generateHessianKernel2(self, Sigma, shape_params):
-        Wsize = math.ceil(3*Sigma)
+        Wsize = math.ceil(3 * Sigma)
         KernelSize = 2 * (2 * Wsize + 1) - 1
         gx, gy = self.rotatableKernel(Wsize, Sigma)
         md = shape_params["md"] if shape_params["is_vertical"] else shape_params["nd"]
         nd = shape_params["nd"] if shape_params["is_vertical"] else shape_params["md"]
-        gxFFT2, gyFFT2 = fft.fft2(gx, s = (md, nd)), fft.fft2(gy, s = (md, nd))
+        gxFFT2, gyFFT2 = fft.fft2(gx, s=(md, nd)), fft.fft2(gy, s=(md, nd))
         DGaussxx = torch.zeros(len(self.angleOffset), 1, KernelSize, KernelSize)
         DGaussxy = torch.zeros(len(self.angleOffset), 1, KernelSize, KernelSize)
         DGaussyy = torch.zeros(len(self.angleOffset), 1, KernelSize, KernelSize)
         for i, A in enumerate(self.angleOffset):
-            a, b, c, d = math.cos(-A/180*math.pi), math.sin(-A/180*math.pi), math.cos(-A/180*math.pi+math.pi/2), math.sin(-A/180*math.pi+math.pi/2)
-            DGaussxx[i] = fft.ifft2((a*gxFFT2 + b*gyFFT2) * (a*gxFFT2 + b*gyFFT2)).real[None, None, :KernelSize, :KernelSize].float()
-            DGaussyy[i] = fft.ifft2((c*gxFFT2 + d*gyFFT2) * (c*gxFFT2 + d*gyFFT2)).real[None, None, :KernelSize, :KernelSize].float()
-            DGaussxy[i] = fft.ifft2((c*gxFFT2 + d*gyFFT2) * (a*gxFFT2 + b*gyFFT2)).real[None, None, :KernelSize, :KernelSize].float()
-        return torch.from_numpy(DGaussxx.data.numpy()), torch.from_numpy(DGaussyy.data.numpy()), torch.from_numpy(DGaussxy.data.numpy())
+            a, b, c, d = (
+                math.cos(-A / 180 * math.pi),
+                math.sin(-A / 180 * math.pi),
+                math.cos(-A / 180 * math.pi + math.pi / 2),
+                math.sin(-A / 180 * math.pi + math.pi / 2),
+            )
+            DGaussxx[i] = (
+                fft.ifft2((a * gxFFT2 + b * gyFFT2) * (a * gxFFT2 + b * gyFFT2))
+                .real[None, None, :KernelSize, :KernelSize]
+                .float()
+            )
+            DGaussyy[i] = (
+                fft.ifft2((c * gxFFT2 + d * gyFFT2) * (c * gxFFT2 + d * gyFFT2))
+                .real[None, None, :KernelSize, :KernelSize]
+                .float()
+            )
+            DGaussxy[i] = (
+                fft.ifft2((c * gxFFT2 + d * gyFFT2) * (a * gxFFT2 + b * gyFFT2))
+                .real[None, None, :KernelSize, :KernelSize]
+                .float()
+            )
+        return (
+            torch.from_numpy(DGaussxx.data.numpy()),
+            torch.from_numpy(DGaussyy.data.numpy()),
+            torch.from_numpy(DGaussxy.data.numpy()),
+        )
 
     def rotatableKernel(self, Wsize, sigma):
-        k = torch.linspace(-Wsize, Wsize, 2*Wsize+1)[None, :]
-        g = torch.exp(-(k**2)/(2*sigma**2))
-        gp = -(k/sigma) * torch.exp(-(k**2)/(2*sigma**2))
+        k = torch.linspace(-Wsize, Wsize, 2 * Wsize + 1)[None, :]
+        g = torch.exp(-(k**2) / (2 * sigma**2))
+        gp = -(k / sigma) * torch.exp(-(k**2) / (2 * sigma**2))
         return g.T * gp, gp.T * g
 
     def generateHessianKernel(self, Sigma):
-        tmp = np.linspace(-1*np.ceil(Sigma*6), np.ceil(Sigma*6), int(np.ceil(Sigma*6)*2+1))
-        X, Y = np.meshgrid(tmp, tmp, indexing='ij')
-        DGaussxx = torch.from_numpy(1/(2*math.pi*Sigma**4) * (X**2/Sigma**2 - 1) * np.exp(-(X**2 + Y**2)/(2*Sigma**2)))[None, None, :, :]
-        DGaussxy = torch.from_numpy(1/(2*math.pi*Sigma**6) * (X * Y) * np.exp(-(X**2 + Y**2)/(2*Sigma**2)))[None, None, :, :]
+        tmp = np.linspace(
+            -1 * np.ceil(Sigma * 6), np.ceil(Sigma * 6), int(np.ceil(Sigma * 6) * 2 + 1)
+        )
+        X, Y = np.meshgrid(tmp, tmp, indexing="ij")
+        DGaussxx = torch.from_numpy(
+            1
+            / (2 * math.pi * Sigma**4)
+            * (X**2 / Sigma**2 - 1)
+            * np.exp(-(X**2 + Y**2) / (2 * Sigma**2))
+        )[None, None, :, :]
+        DGaussxy = torch.from_numpy(
+            1
+            / (2 * math.pi * Sigma**6)
+            * (X * Y)
+            * np.exp(-(X**2 + Y**2) / (2 * Sigma**2))
+        )[None, None, :, :]
         DGaussyy = DGaussxx.transpose(3, 2)
-        DGaussxx, DGaussxy, DGaussyy = DGaussxx.float().data.numpy(), DGaussxy.float().data.numpy(), DGaussyy.float().data.numpy()
+        DGaussxx, DGaussxy, DGaussyy = (
+            DGaussxx.float().data.numpy(),
+            DGaussxy.float().data.numpy(),
+            DGaussyy.float().data.numpy(),
+        )
         Gaussxx, Gaussxy, Gaussyy = [], [], []
         for A in self.angleOffset:
-            Gaussxx.append(scipy.ndimage.rotate(DGaussxx, A, axes = (-2, -1), reshape = False))
-            Gaussyy.append(scipy.ndimage.rotate(DGaussyy, A, axes = (-2, -1), reshape = False))
-            Gaussxy.append(scipy.ndimage.rotate(DGaussxy, A, axes = (-2, -1), reshape = False))
-        Gaussxx, Gaussyy, Gaussxy = np.concatenate(Gaussxx, 0), np.concatenate(Gaussyy, 0), np.concatenate(Gaussxy, 0)
-        return torch.from_numpy(Gaussyy), torch.from_numpy(Gaussxx), torch.from_numpy(Gaussxy)
+            Gaussxx.append(
+                scipy.ndimage.rotate(DGaussxx, A, axes=(-2, -1), reshape=False)
+            )
+            Gaussyy.append(
+                scipy.ndimage.rotate(DGaussyy, A, axes=(-2, -1), reshape=False)
+            )
+            Gaussxy.append(
+                scipy.ndimage.rotate(DGaussxy, A, axes=(-2, -1), reshape=False)
+            )
+        Gaussxx, Gaussyy, Gaussxy = (
+            np.concatenate(Gaussxx, 0),
+            np.concatenate(Gaussyy, 0),
+            np.concatenate(Gaussxy, 0),
+        )
+        return (
+            torch.from_numpy(Gaussyy),
+            torch.from_numpy(Gaussxx),
+            torch.from_numpy(Gaussxy),
+        )
 
     def TotalVariation(self, x, target):
         return (
@@ -463,7 +551,9 @@ class Loss(nn.Module):
 
     def forward(self, outputGNNraw, outputGNN, outputLR, smoothedTarget, targets, map):
         mse = torch.sum(
-            torch.abs(smoothedTarget - self.GuidedFilterLoss(outputGNNraw, outputGNNraw))
+            torch.abs(
+                smoothedTarget - self.GuidedFilterLoss(outputGNNraw, outputGNNraw)
+            )
         ) + torch.sum(
             (torch.abs(targets - outputGNN) * map)[
                 :, :, :: self.sampling, :: self.sampling
