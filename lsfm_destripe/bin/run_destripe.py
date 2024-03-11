@@ -219,34 +219,30 @@ def main():
         dbg = args.debug
 
         exe = DeStripe(
-                args.is_vertical,
-                args.angleOffset,
-                args.losseps,
-                args.qr,
-                args.resampleRatio,
-                args.KGF,
-                args.KGFh,
-                args.HKs,
-                args.sampling_in_MSELoss,
-                args.isotropic_hessian,
-                args.lambda_tv,
-                args.lambda_hessian,
-                args.inc,
-                args.n_epochs,
-                args.deg,
-                args.Nneighbors,
-                args.fast_GF,
-                args.require_global_correction,
-                args.GFr,
-                args.Gaussianr
-            )
-        out = exe.train(args.X1, 
-                        args.X2,
-                        args.mask,
-                        args.dualX,
-                        args.boundary)
+            args.is_vertical,
+            args.angleOffset,
+            args.losseps,
+            args.qr,
+            args.resampleRatio,
+            args.KGF,
+            args.KGFh,
+            args.HKs,
+            args.sampling_in_MSELoss,
+            args.isotropic_hessian,
+            args.lambda_tv,
+            args.lambda_hessian,
+            args.inc,
+            args.n_epochs,
+            args.deg,
+            args.Nneighbors,
+            args.fast_GF,
+            args.require_global_correction,
+            args.GFr,
+            args.Gaussianr,
+        )
+        out = exe.train(args.X1, args.X2, args.mask, args.dualX, args.boundary)
         OmeTiffWriter.save(out, args.out_path, dim_order="ZYX")
- 
+
     except Exception as e:
         log.error("=============================================")
         if dbg:
