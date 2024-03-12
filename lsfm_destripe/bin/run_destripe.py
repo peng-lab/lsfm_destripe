@@ -111,12 +111,12 @@ class Args(argparse.Namespace):
             "--HKs",
             action="store",
             dest="HKs",
-            default=0.5,
+            default=1,
             type=float,
         )
 
         p.add_argument(
-            "-s" "--sampling_in_MSEloss",
+            "--sampling_in_MSEloss",
             action="store",
             dest="sampling_in_MSEloss",
             default=2,
@@ -199,6 +199,52 @@ class Args(argparse.Namespace):
             dest="Gaussianr",
             default=49,
             type=int,
+        )
+
+        p.add_argument(
+            "--X1",
+            action="store",
+            dest="X1",
+            type=str,
+        )
+
+        p.add_argument(
+            "--X2",
+            action="store",
+            dest="X2",
+            default=None,
+            type=str,
+        )
+
+        p.add_argument(
+            "--mask",
+            action="store",
+            dest="mask",
+            default=None,
+            type=str,
+        )
+
+        p.add_argument(
+            "--dualX",
+            action="store",
+            dest="dualX",
+            default=None,
+            type=str,
+        )
+
+        p.add_argument(
+            "--boundary",
+            action="store",
+            dest="boundary",
+            default=None,
+            type=str,
+        )
+
+        p.add_argument(
+            "--out_path",
+            action="store",
+            dest="out_path",
+            type=str,
         )
 
         p.add_argument(
