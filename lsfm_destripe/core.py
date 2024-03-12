@@ -11,7 +11,8 @@ import torchvision
 import tqdm
 from typing import Union, Tuple, Optional, List, Dict
 import dask.array as da
-from dask_image.imread import imread
+from aicsimageio import AICSImage
+import dask
 
 from lsfm_destripe.network import DeStripeModel, GuidedFilterLoss, Loss
 from lsfm_destripe.utils import prepare_aux, global_correction, fusion_perslice
@@ -40,7 +41,7 @@ class DeStripe:
         resampleRatio: int = 2,
         KGF: int = 29,
         KGFh: int = 29,
-        HKs: float = 0.5,
+        HKs: float = 1,
         sampling_in_MSEloss: int = 2,
         isotropic_hessian: bool = True,
         lambda_tv: float = 1,
@@ -86,7 +87,7 @@ class DeStripe:
         sample_params: Dict,
         train_params: Dict,
         X: np.ndarray,
-        map: np.ndarray = None,
+        mask: np.ndarray = None,
         dualtarget: np.ndarray = None,
         boundary: np.ndarray = None,
         s_: int = 1,
@@ -100,7 +101,7 @@ class DeStripe:
             sample_params["nd"] if sample_params["is_vertical"] else sample_params["md"]
         )
         # put on cuda
-        X, map = torch.from_numpy(X).to(device), torch.from_numpy(map).to(device)
+        X, mask = torch.from_numpy(X).to(device), torch.from_numpy(mask).to(device)
         if sample_params["view_num"] > 1:
             assert X.shape[1] == 2, print("input X must have 2 channels.")
             assert isinstance(boundary, np.ndarray), print(
@@ -127,8 +128,10 @@ class DeStripe:
             dualtargetd = F.interpolate(
                 dualtarget, (md, nd), align_corners=True, mode="bilinear"
             )
-        map = F.interpolate(map.float(), (md, nd), align_corners=True, mode="bilinear")
-        map = (map > 0).float()
+        mask = F.interpolate(
+            mask.float(), (md, nd), align_corners=True, mode="bilinear"
+        )
+        mask = (mask > 0).float()
         # to Fourier
         Xf = (
             fft.fftshift(fft.fft2(Xd))
@@ -175,7 +178,7 @@ class DeStripe:
                 Y_LR,
                 smoothedTarget,
                 Xd if sample_params["view_num"] == 1 else dualtargetd,
-                map,
+                mask,
             )  # Xd, X
             epoch_loss.backward()
             optimizer.step()
@@ -231,11 +234,11 @@ class DeStripe:
 
     @staticmethod
     def train_on_full_arr(
-        X,
+        X: Union[np.ndarray, dask.array.core.Array],
         sample_params: Dict,
         train_params: Dict,
-        map=None,
-        dualtarget=None,
+        mask: Union[np.ndarray, dask.array.core.Array] = None,
+        dualtarget: Union[np.ndarray, dask.array.core.Array] = None,
         boundary: np.ndarray = None,
         display: bool = False,
         device: str = "cpu",
@@ -279,12 +282,14 @@ class DeStripe:
                 dualtarget_slice = np.log10(
                     np.clip(np.asarray(dualtarget[i : i + 1]), 1, None)
                 )[None]
-            map_slice = np.asarray(map[i : i + 1])[None]
+            mask_slice = np.asarray(mask[i : i + 1])[None]
             boundary_slice = (
                 boundary[None, None, i : i + 1, :] if boundary is not None else None
             )
             if not sample_params["is_vertical"]:
-                O, map_slice = O.transpose(0, 1, 3, 2), map_slice.transpose(0, 1, 3, 2)
+                O, mask_slice = O.transpose(0, 1, 3, 2), mask_slice.transpose(
+                    0, 1, 3, 2
+                )
                 if sample_params["view_num"] > 1:
                     dualtarget_slice = dualtarget_slice.transpose(0, 1, 3, 2)
             Y, resultslice = DeStripe.train_on_one_slice(
@@ -292,7 +297,7 @@ class DeStripe:
                 sample_params,
                 train_params,
                 O,
-                map_slice,
+                mask_slice,
                 dualtarget_slice if sample_params["view_num"] > 1 else None,
                 boundary_slice,
                 i + 1,
@@ -341,21 +346,24 @@ class DeStripe:
 
     def train(
         self,
-        X1: Union[str, np.ndarray],
-        X2: Union[str, np.ndarray] = None,
-        mask: Union[str, np.ndarray] = None,
-        dualX: Union[str, np.ndarray] = None,
-        boundary: np.ndarray = None,
+        X1: Union[str, np.ndarray, dask.array.core.Array],
+        X2: Union[str, np.ndarray, dask.array.core.Array] = None,
+        mask: Union[str, np.ndarray, dask.array.core.Array] = None,
+        dualX: Union[str, np.ndarray, dask.array.core.Array] = None,
+        boundary: Union[str, np.ndarray] = None,
         display: bool = False,
     ):
         # read in X
-        if isinstance(X1, np.ndarray):
-            X1 = X1 if X1.ndim == 3 else X1[None, :, :]
-        if isinstance(X2, np.ndarray):
-            X2 = X2 if X2.ndim == 3 else X2[None, :, :]
-        X1 = imread(X1) if isinstance(X1, str) else X1
-        X2 = imread(X2) if isinstance(X2, str) else X2
-        X = da.stack([X1, X2], 1) if X2 is not None else da.stack([X1], 1)
+        X1_handle = AICSImage(X1)
+        X1_data = X1_handle.get_image_dask_data("ZYX", T=0, C=0)
+        if X2 is not None:
+            X2_handle = AICSImage(X2)
+            X2_data = X2_handle.get_image_dask_data("ZYX", T=0, C=0)
+        X = (
+            da.stack([X1_data, X2_data], 1)
+            if X2 is not None
+            else da.stack([X1_data], 1)
+        )
         self.sample_params["view_num"] = X.shape[1]
         z, _, m, n = X.shape
         md, nd = (
@@ -366,13 +374,11 @@ class DeStripe:
         self.sample_params["md"], self.sample_params["nd"] = md, nd
         # read in mask
         if mask is None:
-            map = np.zeros((z, m, n), dtype=bool)
+            mask_data = np.zeros((z, m, n), dtype=bool)
         else:
-            if isinstance(mask, str):
-                map = imread(mask)
-            elif isinstance(mask, np.ndarray):
-                map = mask if mask.ndim == 3 else mask[None, :, :]
-            assert map.shape == (z, m, n), print(
+            mask_handle = AICSImage(mask)
+            mask_data = mask_handle.get_image_dask_data("ZYX", T=0, C=0)
+            assert mask_data.shape == (z, m, n), print(
                 "mask should be of same shape as input volume(s)."
             )
         # read in dual-result, if applicable
@@ -384,15 +390,18 @@ class DeStripe:
             assert not isinstance(boundary, type(None)), print(
                 "dual-view fusion boundary is missing."
             )
-            if isinstance(dualX, str):
-                dualtarget = imread(dualX)
-            elif isinstance(dualX, np.ndarray):
-                dualtarget = dualX if dualX.ndim == 3 else dualX[None, :, :]
+            if isinstance(boundary, str):
+                boundary = np.load(boundary)
+            dualtarget_handle = AICSImage(dualX)
+            dualtarget = dualtarget_handle.get_image_dask_data("ZYX", T=0, C=0)
             assert (
                 boundary.shape == (z, n)
                 if self.sample_params["is_vertical"]
                 else (z, m)
             ), print("boundary index should be of shape [z_slices, n columns].")
+            assert dualtarget.shape == (z, m, n), print(
+                "fusion result should be of same shape as inputs."
+            )
         # training
         hier_mask_arr, hier_ind_arr, NI_arr = prepare_aux(
             self.sample_params["md"],
@@ -409,7 +418,7 @@ class DeStripe:
             X,
             self.sample_params,
             self.train_params,
-            map,
+            mask_data,
             dualtarget,
             boundary,
             display=display,
