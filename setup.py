@@ -43,6 +43,7 @@ requirements = [
     "torchvision",
     "aicsimageio",
     "tqdm",
+    "matplotlib",
 ]
 
 extra_requirements = {

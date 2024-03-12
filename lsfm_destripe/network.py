@@ -5,7 +5,6 @@ import torch
 import torch.fft as fft
 from torch.nn import functional as F
 import torch.nn as nn
-import torchvision
 import scipy
 
 

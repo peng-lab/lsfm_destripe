@@ -11,7 +11,6 @@ import logging
 import sys
 import traceback
 
-from pathlib import Path
 from aicsimageio.writers import OmeTiffWriter
 from lsfm_destripe import DeStripe, get_module_version
 

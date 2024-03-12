@@ -1,15 +1,10 @@
 import matplotlib.pyplot as plt
-import math
 import numpy as np
-from scipy import ndimage
 import torch
 import torch.fft as fft
 from torch.nn import functional as F
-import scipy
-import torch.nn as nn
-import torchvision
 import tqdm
-from typing import Union, Tuple, Optional, List, Dict
+from typing import Union, List, Dict
 import dask.array as da
 from aicsimageio import AICSImage
 import dask
@@ -184,7 +179,7 @@ class DeStripe:
             optimizer.step()
         with torch.no_grad():
             m, n = X.shape[-2:]
-            if train_params["fast_GF"] == False:
+            if not train_params["fast_GF"]:
                 resultslice = np.zeros(X.shape, dtype=np.float32)
                 for index in range(X.shape[1]):
                     input2 = X[:, index : index + 1, :, :]
@@ -277,7 +272,7 @@ class DeStripe:
                 Angle=train_params["angleOffset"],
             ).to(device)
         for i in range(z):
-            O = np.log10(np.clip(np.asarray(X[i : i + 1]), 1, None))  # (1, v, m, n)
+            Ov = np.log10(np.clip(np.asarray(X[i : i + 1]), 1, None))  # (1, v, m, n)
             if sample_params["view_num"] > 1:
                 dualtarget_slice = np.log10(
                     np.clip(np.asarray(dualtarget[i : i + 1]), 1, None)
@@ -287,7 +282,7 @@ class DeStripe:
                 boundary[None, None, i : i + 1, :] if boundary is not None else None
             )
             if not sample_params["is_vertical"]:
-                O, mask_slice = O.transpose(0, 1, 3, 2), mask_slice.transpose(
+                Ov, mask_slice = Ov.transpose(0, 1, 3, 2), mask_slice.transpose(
                     0, 1, 3, 2
                 )
                 if sample_params["view_num"] > 1:
@@ -296,7 +291,7 @@ class DeStripe:
                 GuidedFilterHRModel,
                 sample_params,
                 train_params,
-                O,
+                Ov,
                 mask_slice,
                 dualtarget_slice if sample_params["view_num"] > 1 else None,
                 boundary_slice,
@@ -311,14 +306,14 @@ class DeStripe:
             if display:
                 plt.figure(dpi=300)
                 ax = plt.subplot(1, 2, 2)
-                plt.imshow(Y, vmin=10 ** O.min(), vmax=10 ** O.max(), cmap="gray")
+                plt.imshow(Y, vmin=10 ** Ov.min(), vmax=10 ** Ov.max(), cmap="gray")
                 ax.set_title("output", fontsize=8, pad=1)
                 plt.axis("off")
                 ax = plt.subplot(1, 2, 1)
                 plt.imshow(
                     dualtarget[i] if sample_params["view_num"] > 1 else X[i, 0],
-                    vmin=10 ** O.min(),
-                    vmax=10 ** O.max(),
+                    vmin=10 ** Ov.min(),
+                    vmax=10 ** Ov.max(),
                     cmap="gray",
                 )
                 ax.set_title("input", fontsize=8, pad=1)

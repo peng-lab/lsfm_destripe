@@ -214,7 +214,7 @@ class GuidedFilterHR_fast(nn.Module):
         self.crop = None
 
     def forward(self, xx, yy, hX):
-        if self.crop == None:
+        if self.crop is None:
             self.crop = torchvision.transforms.CenterCrop(xx.size()[-2:])
         AList, bList = [], []
         for i, Angle in enumerate(self.angleList):

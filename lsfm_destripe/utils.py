@@ -154,7 +154,7 @@ def prepare_aux(
     hier_ind: ndarray
         TODO
     """
-    if is_vertical == False:
+    if not is_vertical:
         (nd, md) = (md, nd)
     angleMask = np.stack(
         [WedgeMask(md, nd, Angle=angle, deg=deg) for angle in angleOffset], 0
