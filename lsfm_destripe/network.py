@@ -6,6 +6,21 @@ import torch.fft as fft
 from torch.nn import functional as F
 import torch.nn as nn
 import torchvision
+import scipy
+
+
+def Cmplx_Xavier_Init(weight):
+    n_in, n_out = weight.shape
+    sigma = 1 / np.sqrt(n_in + n_out)
+    magnitudes = np.random.rayleigh(scale=sigma, size=(n_in, n_out))
+    phases = np.random.uniform(size=(n_in, n_out), low=-np.pi, high=np.pi)
+    return torch.from_numpy(magnitudes * np.exp(1.0j * phases)).to(torch.cfloat)
+
+
+def CmplxRndUniform(bias, minval, maxval):
+    real_part = np.random.uniform(size=bias.shape, low=minval, high=maxval)
+    imag_part = np.random.uniform(size=bias.shape, low=minval, high=maxval)
+    return torch.from_numpy(real_part + 1j * imag_part).to(torch.cfloat)
 
 
 class complexReLU(nn.Module):
@@ -26,16 +41,22 @@ class ResLearning(nn.Module):
             complexReLU(),
             nn.Linear(outc, outc).to(torch.cfloat),
         )
-        if self.inc != self.outc:
-            self.linear = nn.Linear(inc, outc).to(torch.cfloat)
+        self.linear = nn.Linear(inc, outc).to(torch.cfloat)
         self.complexReLU = complexReLU()
+        for m in self.children():
+            if isinstance(m, nn.Sequential):
+                for n in m.children():
+                    if isinstance(n, nn.Linear):
+                        n.weight.data = Cmplx_Xavier_Init(n.weight.data)
+                        n.bias.data = CmplxRndUniform(n.bias.data, -0.001, 0.001)
+            else:
+                if isinstance(m, nn.Linear):
+                    m.weight.data = Cmplx_Xavier_Init(m.weight.data)
+                    m.bias.data = CmplxRndUniform(m.bias.data, -0.001, 0.001)
 
     def __call__(self, x):
         inx = self.f(x)
-        if self.inc == self.outc:
-            return self.complexReLU(inx + x)
-        else:
-            return self.complexReLU(inx + self.linear(x))
+        return self.complexReLU(inx + self.linear(x))
 
 
 class GuidedFilter(nn.Module):
@@ -97,6 +118,68 @@ class GuidedFilter(nn.Module):
         return X
 
 
+class dual_view_fusion:
+    def __init__(self, r, m, n, resampleRatio, eps=1, device="cuda"):
+        self.r = r
+        self.mask = torch.arange(m)[None, None, :, None].to(device)
+        self.m, self.n = m, n
+        self.eps = eps
+        self.resampleRatio = resampleRatio
+
+    def diff_x(self, input, r):
+        left = input[:, :, r : 2 * r + 1]
+        middle = input[:, :, 2 * r + 1 :] - input[:, :, : -2 * r - 1]
+        right = input[:, :, -1:] - input[:, :, -2 * r - 1 : -r - 1]
+        output = torch.cat([left, middle, right], 2)
+        return output
+
+    def diff_y(self, input, r):
+        left = input[:, :, :, r : 2 * r + 1]
+        middle = input[:, :, :, 2 * r + 1 :] - input[:, :, :, : -2 * r - 1]
+        right = input[:, :, :, -1:] - input[:, :, :, -2 * r - 1 : -r - 1]
+        output = torch.cat([left, middle, right], 3)
+        return output
+
+    def boxfilter(self, input):
+        return self.diff_y(self.diff_x(input.cumsum(2), self.r).cumsum(3), self.r)
+
+    def guidedfilter(self, x, y):
+        N = self.boxfilter(torch.ones_like(x))
+        mean_x, mean_y = self.boxfilter(x) / N, self.boxfilter(y) / N
+        cov_xy = self.boxfilter(x * y) / N - mean_x * mean_y
+        var_x = self.boxfilter(x * x) / N - mean_x * mean_x
+        A = cov_xy / torch.clip(var_x, self.eps, None)
+        b = mean_y - A * mean_x
+        A, b = self.boxfilter(A) / N, self.boxfilter(b) / N
+        return A * x + b
+
+    def __call__(self, x, boundary):
+        boundary = (
+            F.interpolate(
+                boundary, size=(1, self.n), mode="bilinear", align_corners=True
+            )
+            / self.resampleRatio
+        )
+        topSlice, bottomSlice = torch.split(x, split_size_or_sections=[1, 1], dim=1)
+        mask0, mask1 = self.mask > boundary, self.mask <= boundary
+        result0, result1 = self.guidedfilter(bottomSlice, mask0), self.guidedfilter(
+            topSlice, mask1
+        )
+        t = result0 + result1 + 1e-3
+        result0, result1 = result0 / t, result1 / t
+        return result0 * bottomSlice + result1 * topSlice
+
+
+class identical_func:
+    def __init__(
+        self,
+    ):
+        pass
+
+    def __call__(self, x, boundary):
+        return x
+
+
 class DeStripeModel(nn.Module):
     def __init__(
         self,
@@ -106,9 +189,11 @@ class DeStripeModel(nn.Module):
         NI,
         m,
         n,
+        resampleRatio,
         KS,
-        Nneighbors=16,
         inc=16,
+        GFr=49,
+        viewnum=1,
         device="cuda",
     ):
         super(DeStripeModel, self).__init__()
@@ -177,7 +262,7 @@ class DeStripeModel(nn.Module):
             1,
             torch.pow(torch.abs(self.TVfftx), 2) + torch.pow(torch.abs(self.TVffty), 2),
         )
-        self.p = ResLearning(1, inc)
+        self.p = ResLearning(viewnum, inc)
         self.edgeProcess = nn.Sequential(
             nn.Linear(inc, inc).to(torch.cfloat),
             complexReLU(),
@@ -193,20 +278,34 @@ class DeStripeModel(nn.Module):
             complexReLU(),
             nn.Linear(inc, inc).to(torch.cfloat),
             complexReLU(),
-            nn.Linear(inc, 1).to(torch.cfloat),
+            nn.Linear(inc, viewnum).to(torch.cfloat),
         )
         self.base = nn.Sequential(
             nn.Linear(1, inc),
-            nn.ReLU(),
+            nn.ReLU(inplace=True),
             nn.Linear(inc, inc),
-            nn.ReLU(),
-            nn.Linear(inc, 1),
+            nn.ReLU(inplace=True),
+            nn.Linear(inc, viewnum),
         )
+        self.viewnum = viewnum
         self.GuidedFilter = GuidedFilter(rx=KS, ry=0, m=m, n=n, Angle=Angle)
-        self.w = nn.Parameter(torch.rand(NI.shape))
+        self.w = nn.Parameter(torch.rand(NI.shape) + 1j * torch.rand(NI.shape))
+        self.w.data = Cmplx_Xavier_Init(self.w.data)
         self.complexReLU = complexReLU()
         self.ainput = torch.ones(1, 1).to(device)
         self.inc = inc
+        self.fuse = (
+            dual_view_fusion(GFr, m, n, resampleRatio, device=device)
+            if viewnum == 2
+            else identical_func()
+        )
+        for m in self.children():
+            if isinstance(m, nn.Sequential):
+                for n in m.children():
+                    if isinstance(n, nn.Linear):
+                        if n.weight.data.dtype is torch.cfloat:
+                            n.weight.data = Cmplx_Xavier_Init(n.weight.data)
+                            n.bias.data = CmplxRndUniform(n.bias.data, -0.001, 0.001)
 
     def rotatableKernel(self, Wsize, sigma):
         k = np.linspace(-Wsize, Wsize, 2 * Wsize + 1)[None, :]
@@ -246,12 +345,15 @@ class DeStripeModel(nn.Module):
                             torch.conj(torch.flip(z, [0])),
                         ),
                         0,
-                    ).reshape(1, 1, self.m, -1)
+                    )
+                    .reshape(1, self.m, -1, self.viewnum)
+                    .permute(0, 3, 1, 2)
                 )
             )
         )
 
-    def forward(self, Xd, Xf):
+    def forward(self, Xd, Xf, target, boundary):
+        aver = Xd.sum(dim=(2, 3)) + 1j * 0
         Xf = self.p(Xf)
         Xfcx = torch.sum(torch.einsum("knc,kn->knc", Xf[self.NI, :], self.w), 0)
         Xf_tvx = torch.cat((Xfcx, Xf[self.hier_mask, :]), 0)[self.hier_ind, :].reshape(
@@ -272,32 +374,33 @@ class DeStripeModel(nn.Module):
                 )
             )
         X_fourier = self.merge(torch.cat(X_fourier, -1))
-        outputGNN = self.fourierResult(X_fourier, Xd.sum())
-        outputLR = self.GuidedFilter(Xd, torch.clip(outputGNN, 0, None))
-        return outputGNN, outputLR
+        outputGNNraw = self.fourierResult(X_fourier, aver)
+        outputGNN = self.fuse(outputGNNraw, boundary)
+        outputLR = self.GuidedFilter(target, outputGNN)
+        return outputGNNraw, outputGNN, outputLR
 
 
 class GuidedFilterLoss(nn.Module):
-    def __init__(self, rx, ry, eps=1e-9):
+    def __init__(self, r, eps=1e-9):
         super(GuidedFilterLoss, self).__init__()
-        self.rx, self.ry, self.eps = rx, ry, eps
+        self.r, self.eps = r, eps
 
     def diff_x(self, input, r):
-        left = input[:, :, r : 2 * r + 1]
-        middle = input[:, :, 2 * r + 1 :] - input[:, :, : -2 * r - 1]
-        right = input[:, :, -1:] - input[:, :, -2 * r - 1 : -r - 1]
-        output = torch.cat([left, middle, right], 2)
-        return output
+        return input[:, :, 2 * r + 1 :, :] - input[:, :, : -2 * r - 1, :]
 
     def diff_y(self, input, r):
-        left = input[:, :, :, r : 2 * r + 1]
-        middle = input[:, :, :, 2 * r + 1 :] - input[:, :, :, : -2 * r - 1]
-        right = input[:, :, :, -1:] - input[:, :, :, -2 * r - 1 : -r - 1]
-        output = torch.cat([left, middle, right], 3)
-        return output
+        return input[:, :, :, 2 * r + 1 :] - input[:, :, :, : -2 * r - 1]
 
     def boxfilter(self, input):
-        return self.diff_y(self.diff_x(input.cumsum(2), self.rx).cumsum(3), self.ry)
+        return self.diff_x(
+            self.diff_y(
+                F.pad(
+                    input, (self.r + 1, self.r, self.r + 1, self.r), mode="constant"
+                ).cumsum(3),
+                self.r,
+            ).cumsum(2),
+            self.r,
+        )
 
     def forward(self, x, y):
         N = self.boxfilter(torch.ones_like(x))
@@ -311,53 +414,43 @@ class GuidedFilterLoss(nn.Module):
 
 
 class Loss(nn.Module):
-    def __init__(
-        self,
-        HKs,
-        lambda_tv,
-        lambda_hessian,
-        sampling,
-        f,
-        md,
-        nd,
-        Angle,
-        KGF,
-        losseps,
-        device,
-    ):
+    def __init__(self, train_params, shape_params, device):
         super(Loss, self).__init__()
-        self.md, self.nd = md, nd
-        self.angleOffset = Angle
+        self.lambda_tv = train_params["lambda_tv"]
+        self.lambda_hessian = train_params["lambda_hessian"]
+        self.angleOffset = train_params["angleOffset"]
+        self.sampling = train_params["sampling"]
+        self.f = train_params["f"]
         self.Dy = torch.from_numpy(
             np.array([[1], [-1]], dtype=np.float32)[None, None]
         ).to(device)
         self.Dx = torch.from_numpy(
             np.array([[1, -1]], dtype=np.float32)[None, None]
         ).to(device)
-        self.DGaussxx, self.DGaussyy, self.DGaussxy = self.generateHessianKernel(HKs)
+        if train_params["HKs"] > 0.5:
+            self.DGaussxx, self.DGaussyy, self.DGaussxy = self.generateHessianKernel(
+                train_params["HKs"]
+            )
+        else:
+            self.DGaussxx, self.DGaussyy, self.DGaussxy = self.generateHessianKernel2(
+                train_params["HKs"], shape_params
+            )
         self.DGaussxx, self.DGaussyy, self.DGaussxy = (
             self.DGaussxx.to(device),
             self.DGaussyy.to(device),
             self.DGaussxy.to(device),
         )
-        self.GuidedFilterLoss = GuidedFilterLoss(rx=KGF, ry=KGF, eps=losseps)
-        self.lambda_tv, self.lambda_hessian = lambda_tv, lambda_hessian
-        self.sampling = sampling
-        self.f = f
+        self.GuidedFilterLoss = GuidedFilterLoss(
+            r=train_params["KGF"], eps=train_params["losseps"]
+        )
 
-    def rotatableKernel(self, Wsize, sigma):
-        k = torch.linspace(-Wsize, Wsize, 2 * Wsize + 1)[None, :]
-        g = torch.exp(-(k**2) / (2 * sigma**2))
-        gp = -(k / sigma) * torch.exp(-(k**2) / (2 * sigma**2))
-        return g.T * gp, gp.T * g
-
-    def generateHessianKernel(self, Sigma):
+    def generateHessianKernel2(self, Sigma, shape_params):
         Wsize = math.ceil(3 * Sigma)
         KernelSize = 2 * (2 * Wsize + 1) - 1
         gx, gy = self.rotatableKernel(Wsize, Sigma)
-        gxFFT2, gyFFT2 = fft.fft2(gx, s=(self.md, self.nd)), fft.fft2(
-            gy, s=(self.md, self.nd)
-        )
+        md = shape_params["md"] if shape_params["is_vertical"] else shape_params["nd"]
+        nd = shape_params["nd"] if shape_params["is_vertical"] else shape_params["md"]
+        gxFFT2, gyFFT2 = fft.fft2(gx, s=(md, nd)), fft.fft2(gy, s=(md, nd))
         DGaussxx = torch.zeros(len(self.angleOffset), 1, KernelSize, KernelSize)
         DGaussxy = torch.zeros(len(self.angleOffset), 1, KernelSize, KernelSize)
         DGaussyy = torch.zeros(len(self.angleOffset), 1, KernelSize, KernelSize)
@@ -383,7 +476,62 @@ class Loss(nn.Module):
                 .real[None, None, :KernelSize, :KernelSize]
                 .float()
             )
-        return DGaussxx, DGaussyy, DGaussxy
+        return (
+            torch.from_numpy(DGaussxx.data.numpy()),
+            torch.from_numpy(DGaussyy.data.numpy()),
+            torch.from_numpy(DGaussxy.data.numpy()),
+        )
+
+    def rotatableKernel(self, Wsize, sigma):
+        k = torch.linspace(-Wsize, Wsize, 2 * Wsize + 1)[None, :]
+        g = torch.exp(-(k**2) / (2 * sigma**2))
+        gp = -(k / sigma) * torch.exp(-(k**2) / (2 * sigma**2))
+        return g.T * gp, gp.T * g
+
+    def generateHessianKernel(self, Sigma):
+        tmp = np.linspace(
+            -1 * np.ceil(Sigma * 6), np.ceil(Sigma * 6), int(np.ceil(Sigma * 6) * 2 + 1)
+        )
+        X, Y = np.meshgrid(tmp, tmp, indexing="ij")
+        DGaussxx = torch.from_numpy(
+            1
+            / (2 * math.pi * Sigma**4)
+            * (X**2 / Sigma**2 - 1)
+            * np.exp(-(X**2 + Y**2) / (2 * Sigma**2))
+        )[None, None, :, :]
+        DGaussxy = torch.from_numpy(
+            1
+            / (2 * math.pi * Sigma**6)
+            * (X * Y)
+            * np.exp(-(X**2 + Y**2) / (2 * Sigma**2))
+        )[None, None, :, :]
+        DGaussyy = DGaussxx.transpose(3, 2)
+        DGaussxx, DGaussxy, DGaussyy = (
+            DGaussxx.float().data.numpy(),
+            DGaussxy.float().data.numpy(),
+            DGaussyy.float().data.numpy(),
+        )
+        Gaussxx, Gaussxy, Gaussyy = [], [], []
+        for A in self.angleOffset:
+            Gaussxx.append(
+                scipy.ndimage.rotate(DGaussxx, A, axes=(-2, -1), reshape=False)
+            )
+            Gaussyy.append(
+                scipy.ndimage.rotate(DGaussyy, A, axes=(-2, -1), reshape=False)
+            )
+            Gaussxy.append(
+                scipy.ndimage.rotate(DGaussxy, A, axes=(-2, -1), reshape=False)
+            )
+        Gaussxx, Gaussyy, Gaussxy = (
+            np.concatenate(Gaussxx, 0),
+            np.concatenate(Gaussyy, 0),
+            np.concatenate(Gaussxy, 0),
+        )
+        return (
+            torch.from_numpy(Gaussyy),
+            torch.from_numpy(Gaussxx),
+            torch.from_numpy(Gaussxy),
+        )
 
     def TotalVariation(self, x, target):
         return (
@@ -401,11 +549,13 @@ class Loss(nn.Module):
             ).sum()
         )
 
-    def forward(self, outputGNN, outputLR, smoothedTarget, targets, map):
+    def forward(self, outputGNNraw, outputGNN, outputLR, smoothedTarget, targets, map):
         mse = torch.sum(
-            torch.abs(smoothedTarget - self.GuidedFilterLoss(outputLR, outputLR))
+            torch.abs(
+                smoothedTarget - self.GuidedFilterLoss(outputGNNraw, outputGNNraw)
+            )
         ) + torch.sum(
-            (torch.abs(targets - outputLR) * map)[
+            (torch.abs(targets - outputGNN) * map)[
                 :, :, :: self.sampling, :: self.sampling
             ]
         )
@@ -416,289 +566,3 @@ class Loss(nn.Module):
             outputGNN, targets
         ) + 1 * self.HessianRegularizationLoss(outputLR, targets)
         return mse + self.lambda_tv * tv + self.lambda_hessian * hessian
-
-
-class BoxFilter(nn.Module):
-    def __init__(self, rx, ry, Angle):
-        super(BoxFilter, self).__init__()
-        self.rx, self.ry = rx, ry
-        if Angle != 0:
-            kernelx = torch.zeros(rx * 4 + 1, rx * 4 + 1)
-            kernelx[:, rx * 2] = 1
-            kernelx = ndimage.rotate(kernelx, Angle, reshape=False, order=1)[
-                rx : 3 * rx + 1, rx : 3 * rx + 1
-            ]
-            self.kernelx = torch.from_numpy(kernelx[None, None, :, :]).float().cuda()
-        else:
-            self.kernelx = torch.ones(1, 1, 2 * rx + 1, 2 * ry + 1).float().cuda()
-        self.Angle = Angle
-
-    def diff_x(self, input):
-        if self.Angle != 0:
-            return torch.conv2d(
-                F.pad(input, (self.rx, self.rx, self.rx, self.rx), mode="circular"),
-                self.kernelx,
-            )
-        else:
-            return torch.conv2d(
-                F.pad(input, (self.ry, self.ry, self.rx, self.rx), mode="circular"),
-                self.kernelx,
-            )
-
-    def forward(self, x):
-        return self.diff_x(x)
-
-
-class GuidedFilterHR_fast(nn.Module):
-    def __init__(self, rx, ry, angleList, eps=1e-9):
-        super(GuidedFilterHR_fast, self).__init__()
-        self.eps = eps
-        self.boxfilter = [BoxFilter(rx, ry, Angle=Angle) for Angle in angleList]
-        self.N = None
-        self.angleList = angleList
-        self.crop = None
-
-    def forward(self, xx, yy, hX):
-        with torch.no_grad():
-            if self.crop is None:
-                self.crop = torchvision.transforms.CenterCrop(xx.size()[-2:])
-            AList, bList = [], []
-            for i, Angle in enumerate(self.angleList):
-                x = torchvision.transforms.functional.rotate(xx, Angle, expand=True)
-                y = torchvision.transforms.functional.rotate(yy, Angle, expand=True)
-                h_x, w_x = x.size()[-2:]
-                self.N = self.boxfilter[i](
-                    x.data.new().resize_((1, 1, h_x, w_x)).fill_(1.0)
-                )
-                mean_x = self.boxfilter[i](x) / self.N
-                var_x = self.boxfilter[i](x * x) / self.N - mean_x * mean_x
-                mean_y = self.boxfilter[i](y) / self.N
-                cov_xy = self.boxfilter[i](x * y) / self.N - mean_x * mean_y
-                A = cov_xy / (var_x + self.eps)
-                b = mean_y - A * mean_x
-                A, b = (self.boxfilter[i](A) / self.N), self.boxfilter[i](b) / self.N
-                result = A * x + b
-                AList.append(A)
-                bList.append(b)
-                xx = self.crop(
-                    torchvision.transforms.functional.rotate(
-                        result, -Angle, expand=True
-                    )
-                )
-                yy = self.crop(
-                    torchvision.transforms.functional.rotate(yy, -Angle, expand=True)
-                )
-            h_hrx, w_hrx = hX.size()[-2:]
-            cropH = torchvision.transforms.CenterCrop((h_hrx, w_hrx))
-            for i, (Angle, A, b) in enumerate(zip(self.angleList, AList, bList)):
-                hXX = torchvision.transforms.functional.rotate(hX, Angle, expand=True)
-                hA = F.interpolate(
-                    A, hXX.shape[-2:], mode="bilinear", align_corners=True
-                )
-                hb = F.interpolate(
-                    b, hXX.shape[-2:], mode="bilinear", align_corners=True
-                )
-                result = hA * hXX + hb
-                hX = cropH(
-                    torchvision.transforms.functional.rotate(
-                        result, -Angle, expand=True
-                    )
-                )
-                return hX
-
-
-class GuidedFilterHR(nn.Module):
-    def __init__(self, rX, rY, Angle, m, n, eps=1e-9):
-        super(GuidedFilterHR, self).__init__()
-        self.eps = eps
-        self.AngleNum = len(Angle)
-        self.Angle = Angle
-        self.PR, self.PC, self.KERNEL = [], [], []
-        for rx, ry in zip(rX, rY):
-            self.KERNEL.append(torch.ones((1, 1, rx * 2 + 1, ry * 2 + 1)).cuda())
-            self.PR.append(ry)
-            self.PC.append(rx)
-        self.GaussianKernel = torch.tensor(
-            np.ones((rX[1], 1)) * np.ones((1, rX[1])), dtype=torch.float32
-        )
-        self.GaussianKernel = (self.GaussianKernel / self.GaussianKernel.sum())[
-            None, None
-        ].cuda()
-        self.GaussianKernelpadding = (
-            self.GaussianKernel.shape[-2] // 2,
-            self.GaussianKernel.shape[-1] // 2,
-        )
-        self.crop = torchvision.transforms.CenterCrop((m, n))
-        self.K = torch.from_numpy(
-            self.sgolay2dkernel(np.array([rX[1], 1]), np.array([2, 2])).astype(
-                np.float32
-            )
-        ).cuda()[None, None]
-
-    def boxfilter(self, x, weight, k, pc, pr):
-        b, c, m, n = x.shape
-        img = (
-            F.pad(x, (pr, pr, pc, pc))
-            .unfold(-2, k.shape[-2], 1)
-            .unfold(-2, k.shape[-1], 1)
-            .flatten(-2)
-        )
-        return (img * weight).sum(-1)
-
-    def sgolay2dkernel(self, window_size, order):
-        # n_terms = (order + 1) * (order + 2) / 2.0
-        half_size = window_size // 2
-        exps = []
-        for row in range(order[0] + 1):
-            for column in range(order[1] + 1):
-                if (row + column) > max(*order):
-                    continue
-                exps.append((row, column))
-        indx = np.arange(-half_size[0], half_size[0] + 1, dtype=np.float64)
-        indy = np.arange(-half_size[1], half_size[1] + 1, dtype=np.float64)
-        dx = np.repeat(indx, window_size[1])
-        dy = np.tile(indy, [window_size[0], 1]).reshape(
-            window_size[0] * window_size[1],
-        )
-        A = np.empty((window_size[0] * window_size[1], len(exps)))
-        for i, exp in enumerate(exps):
-            A[:, i] = (dx ** exp[0]) * (dy ** exp[1])
-        return np.linalg.pinv(A)[0].reshape((window_size[0], -1))
-
-    def generateWeight(self, y, k, pc, pr, sigma):
-        b, c, m, n = y.shape
-        weight = torch.exp(
-            -(
-                (
-                    F.pad(y, (pr, pr, pc, pc))
-                    .unfold(-2, k.shape[-2], 1)
-                    .unfold(-2, k.shape[-1], 1)
-                    .flatten(-2)
-                    - y[:, :, :, :, None]
-                )
-                ** 2
-            )
-            / (sigma / 2) ** 2
-        )
-        d = (torch.linspace(0, k.shape[-2] - 1, k.shape[-2]) - k.shape[-2] // 2)[
-            :, None
-        ] ** 2 + (torch.linspace(0, k.shape[-1] - 1, k.shape[-1]) - k.shape[-1] // 2)[
-            None, :
-        ] ** 2
-        d = (
-            torch.exp(-d.flatten() / (k.numel() / 4) ** 2)[None, None, None, None, :]
-            .repeat(b, c, m, n, 1)
-            .cuda()
-        )
-        validPart = (
-            F.pad(torch.ones_like(y), (pr, pr, pc, pc))
-            .unfold(-2, k.shape[-2], 1)
-            .unfold(-2, k.shape[-1], 1)
-            .flatten(-2)
-        )
-        weight[:] = weight * d
-        weight[:] = weight * validPart
-        weight[:] = weight / weight.sum(-1, keepdim=True)
-        return weight
-
-    def forward(self, X, y, r):
-        with torch.no_grad():
-            sigma = r * (y.max() - y.min())
-            for i, angle in enumerate(self.Angle):
-                XX = torchvision.transforms.functional.rotate(X, angle, expand=True)
-                yy = torchvision.transforms.functional.rotate(y, angle, expand=True)
-                bdetail, Abase, bbase = [], [], []
-                XXbase, yybase = torch.conv2d(
-                    XX, self.GaussianKernel, padding=self.GaussianKernelpadding
-                ), torch.conv2d(
-                    yy, self.GaussianKernel, padding=self.GaussianKernelpadding
-                )
-                XXdetail, yydetail = XX - XXbase, yy - yybase
-                list_ = np.arange(XX.shape[-1])
-                g, o = 64, 2
-                list_ = [list_[i : i + g] for i in range(0, len(list_), g - o)]
-                if len(list_[-1]) <= 5:
-                    list_[-2] = np.arange(list_[-2][0], XX.shape[-1]).tolist()
-                    del list_[-1]
-                for index, i in enumerate(list_):
-                    Xbase, Xdetail, ybase, ydetail = (
-                        XXbase[..., i[0] : i[-1] + 1],
-                        XXdetail[..., i[0] : i[-1] + 1],
-                        yybase[..., i[0] : i[-1] + 1],
-                        yydetail[..., i[0] : i[-1] + 1],
-                    )
-                    weightDetail = self.generateWeight(
-                        Xdetail, self.KERNEL[0], self.PC[0], self.PR[0], sigma
-                    )
-                    weightBase = self.generateWeight(
-                        Xbase, self.KERNEL[1], self.PC[1], self.PR[1], sigma
-                    )
-                    bdetail.append(
-                        self.boxfilter(
-                            ydetail - Xdetail,
-                            weightDetail,
-                            self.KERNEL[0],
-                            self.PC[0],
-                            self.PR[0],
-                        )[
-                            ...,
-                            o // 2 if index != 0 else 0 : (
-                                -o // 2 if index != len(list_) - 1 else None
-                            ),
-                        ]
-                    )
-                    mean_y, mean_x = self.boxfilter(
-                        ybase, weightBase, self.KERNEL[1], self.PC[1], self.PR[1]
-                    ), self.boxfilter(
-                        Xbase, weightBase, self.KERNEL[1], self.PC[1], self.PR[1]
-                    )
-                    var_x = (
-                        self.boxfilter(
-                            Xbase * Xbase,
-                            weightBase,
-                            self.KERNEL[1],
-                            self.PC[1],
-                            self.PR[1],
-                        )
-                        - mean_x * mean_x
-                    )
-                    cov_xy = (
-                        self.boxfilter(
-                            Xbase * ybase,
-                            weightBase,
-                            self.KERNEL[1],
-                            self.PC[1],
-                            self.PR[1],
-                        )
-                        - mean_x * mean_y
-                    )
-                    A = cov_xy / (var_x + 1e-6)
-                    b = mean_y - A * mean_x
-                    bbase.append(
-                        b[
-                            ...,
-                            o // 2 if index != 0 else 0 : (
-                                -o // 2 if index != len(list_) - 1 else None
-                            ),
-                        ]
-                    )
-                    Abase.append(
-                        A[
-                            ...,
-                            o // 2 if index != 0 else 0 : (
-                                -o // 2 if index != len(list_) - 1 else None
-                            ),
-                        ]
-                    )
-                bdetail = torch.cat(bdetail, -1)
-                Abase, bbase = torch.cat(Abase, -1), torch.cat(bbase, -1)
-                result = Abase * XXbase + bbase + XXdetail + bdetail
-                X = self.crop(
-                    torchvision.transforms.functional.rotate(
-                        result, -angle, expand=True
-                    )
-                )
-                y = self.crop(
-                    torchvision.transforms.functional.rotate(yy, -angle, expand=True)
-                )
-            return X
