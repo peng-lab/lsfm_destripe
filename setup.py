@@ -70,7 +70,7 @@ setup(
     ],
     description="A PyTorch implementation of LSFM DeStripe method",
     entry_points={
-        "console_scripts": ["destripe=lsfm_destripe.bin.run_destripe:main"],
+        "console_scripts": ["DeStripe=lsfm_destripe.bin.run_destripe:main"],
     },
     install_requires=requirements,
     license="MIT license",
