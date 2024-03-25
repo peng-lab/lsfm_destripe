@@ -272,7 +272,7 @@ def main():
             args.KGF,
             args.KGFh,
             args.HKs,
-            args.sampling_in_MSELoss,
+            args.sampling_in_MSEloss,
             args.isotropic_hessian,
             args.lambda_tv,
             args.lambda_hessian,
