@@ -418,7 +418,7 @@ class Loss(nn.Module):
         self.lambda_tv = train_params["lambda_tv"]
         self.lambda_hessian = train_params["lambda_hessian"]
         self.angleOffset = train_params["angleOffset"]
-        self.sampling = train_params["sampling"]
+        self.sampling = train_params["sampling_in_MSEloss"]
         self.f = train_params["f"]
         self.Dy = torch.from_numpy(
             np.array([[1], [-1]], dtype=np.float32)[None, None]

@@ -60,7 +60,7 @@ class DeStripe:
             "HKs": HKs,
             "lambda_tv": lambda_tv,
             "lambda_hessian": lambda_hessian,
-            "sampling": sampling_in_MSEloss,
+            "sampling_in_MSEloss": sampling_in_MSEloss,
             "resampleRatio": [resampleRatio, resampleRatio],
             "f": isotropic_hessian,
             "n_epochs": n_epochs,
