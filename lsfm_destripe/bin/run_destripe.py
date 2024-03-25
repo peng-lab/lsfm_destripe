@@ -146,10 +146,20 @@ class Args(argparse.Namespace):
             type=float,
         )
 
-        p.add_argument("--inc", action="store", dest="inc", default=16, type=int)
+        p.add_argument(
+            "--inc",
+            action="store",
+            dest="inc",
+            default=16,
+            type=int,
+        )
 
         p.add_argument(
-            "--n_epochs", action="store", dest="n_epochs", default=300, type=int
+            "--n_epochs",
+            action="store",
+            dest="n_epochs",
+            default=300,
+            type=int,
         )
 
         p.add_argument(
@@ -247,6 +257,22 @@ class Args(argparse.Namespace):
         )
 
         p.add_argument(
+            "--out_path_top_or_left_view",
+            action="store",
+            dest="out_path_top_or_left_view",
+            default=None,
+            type=str,
+        )
+
+        p.add_argument(
+            "--out_path_bottom_or_right_view",
+            action="store",
+            dest="out_path_bottom_or_right_view",
+            default=None,
+            type=str,
+        )
+
+        p.add_argument(
             "--debug",
             action="store_true",
             dest="debug",
@@ -286,7 +312,24 @@ def main():
             args.Gaussianr,
         )
         out = exe.train(args.X1, args.X2, args.mask, args.dualX, args.boundary)
-        OmeTiffWriter.save(out, args.out_path, dim_order="ZYX")
+        if not isinstance(out, tuple):
+            OmeTiffWriter.save(out, args.out_path, dim_order="ZYX")
+        else:
+            OmeTiffWriter.save(
+                out[0],
+                args.out_path,
+                dim_order="ZYX",
+            )
+            OmeTiffWriter.save(
+                out[1],
+                args.out_path_top_or_left_view,
+                dim_order="ZYX",
+            )
+            OmeTiffWriter.save(
+                out[2],
+                args.out_path_bottom_or_right_view,
+                dim_order="ZYX",
+            )
 
     except Exception as e:
         log.error("=============================================")
