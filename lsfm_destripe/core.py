@@ -61,7 +61,7 @@ class DeStripe:
             "lambda_tv": lambda_tv,
             "lambda_hessian": lambda_hessian,
             "sampling_in_MSEloss": sampling_in_MSEloss,
-            "resampleRatio": [resampleRatio, resampleRatio],
+            "resampleRatio": resampleRatio,
             "f": isotropic_hessian,
             "n_epochs": n_epochs,
             "deg": deg,
@@ -148,7 +148,7 @@ class DeStripe:
             inc=train_params["inc"],
             m=md,
             n=nd,
-            resampleRatio=train_params["resampleRatio"][0],
+            resampleRatio=train_params["resampleRatio"],
             GFr=train_params["GF_kernel_size"],
             viewnum=sample_params["view_num"],
             device=device,
@@ -365,8 +365,8 @@ class DeStripe:
         self.sample_params["view_num"] = X.shape[1]
         z, _, m, n = X.shape
         md, nd = (
-            m // self.train_params["resampleRatio"][0] // 2 * 2 + 1,
-            n // self.train_params["resampleRatio"][1] // 2 * 2 + 1,
+            m // self.train_params["resampleRatio"] // 2 * 2 + 1,
+            n // self.train_params["resampleRatio"] // 2 * 2 + 1,
         )
         self.sample_params["m"], self.sample_params["n"] = m, n
         self.sample_params["md"], self.sample_params["nd"] = md, nd
