@@ -47,8 +47,8 @@ class DeStripe:
         Nneighbors: int = 16,
         fast_GF: bool = False,
         require_global_correction: bool = True,
-        GFr: int = 49,
-        Gaussianr: int = 49,
+        GF_kernel_size: int = 49,
+        Gaussian_kernel_size: int = 49,
     ):
         self.train_params = {
             "fast_GF": fast_GF,
@@ -66,8 +66,8 @@ class DeStripe:
             "n_epochs": n_epochs,
             "deg": deg,
             "qr": qr,
-            "GFr": GFr,
-            "Gaussianr": Gaussianr,
+            "GF_kernel_size": GF_kernel_size,
+            "Gaussian_kernel_size": Gaussian_kernel_size,
             "angleOffset": angleOffset,
         }
         self.sample_params = {
@@ -149,7 +149,7 @@ class DeStripe:
             m=md,
             n=nd,
             resampleRatio=train_params["resampleRatio"][0],
-            GFr=train_params["GFr"],
+            GFr=train_params["GF_kernel_size"],
             viewnum=sample_params["view_num"],
             device=device,
         ).to(device)
@@ -200,14 +200,17 @@ class DeStripe:
                     )
                 if X.shape[1] > 1:
                     kernel = torch.ones(
-                        1, 1, train_params["Gaussianr"], train_params["Gaussianr"]
-                    ).to(device) / (train_params["Gaussianr"] ** 2)
+                        1,
+                        1,
+                        train_params["Gaussian_kernel_size"],
+                        train_params["Gaussian_kernel_size"],
+                    ).to(device) / (train_params["Gaussian_kernel_size"] ** 2)
                     Y = fusion_perslice(
-                        GuidedFilter(r=train_params["GFr"], eps=1),
+                        GuidedFilter(r=train_params["GF_kernel_size"], eps=1),
                         GuidedFilter(r=9, eps=1e-6),
                         resultslice[:, :1, :, :],
                         resultslice[:, 1:, :, :],
-                        train_params["Gaussianr"],
+                        train_params["Gaussian_kernel_size"],
                         kernel,
                         boundary,
                         device=device,
