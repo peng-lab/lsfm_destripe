@@ -139,20 +139,22 @@ class DeStripe:
             torch.from_numpy(train_params["hier_ind"]).to(device),
             torch.from_numpy(train_params["NI"]).to(device),
         )
-        network = DeStripeModel(
-            Angle=train_params["angleOffset"],
-            hier_mask=hier_mask,
-            hier_ind=hier_ind,
-            NI=NI,
-            KS=train_params["KGF"],
-            inc=train_params["inc"],
-            m=md,
-            n=nd,
-            resampleRatio=train_params["resampleRatio"],
-            GFr=train_params["GF_kernel_size"],
-            viewnum=sample_params["view_num"],
-            device=device,
-        ).to(device)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            network = DeStripeModel(
+                Angle=train_params["angleOffset"],
+                hier_mask=hier_mask,
+                hier_ind=hier_ind,
+                NI=NI,
+                KS=train_params["KGF"],
+                inc=train_params["inc"],
+                m=md,
+                n=nd,
+                resampleRatio=train_params["resampleRatio"],
+                GFr=train_params["GF_kernel_size"],
+                viewnum=sample_params["view_num"],
+                device=device,
+            ).to(device)
         optimizer = cADAM(network.parameters(), lr=0.01)
         smoothedTarget = GuidedFilterLoss(
             r=train_params["KGF"], eps=train_params["losseps"]
