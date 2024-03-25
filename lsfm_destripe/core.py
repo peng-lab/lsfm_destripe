@@ -425,6 +425,7 @@ class DeStripe:
             display=display,
             device=self.device,
         )
+        print("Done")
         if self.sample_params["view_num"] == 2:
             return result, result_view1, result_view2
         else:
