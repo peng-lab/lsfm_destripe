@@ -7,14 +7,14 @@ from scipy import ndimage
 
 
 class GuidedFilterHR(nn.Module):
-    def __init__(self, rX, rY, Angle, m, n, eps=1e-9):
+    def __init__(self, rX, rY, Angle, m, n, eps=1e-9, device="cpu"):
         super(GuidedFilterHR, self).__init__()
         self.eps = eps
         self.AngleNum = len(Angle)
         self.Angle = Angle
         self.PR, self.PC, self.KERNEL = [], [], []
         for rx, ry in zip(rX, rY):
-            self.KERNEL.append(torch.ones((1, 1, rx * 2 + 1, ry * 2 + 1)).cuda())
+            self.KERNEL.append(torch.ones((1, 1, rx * 2 + 1, ry * 2 + 1)).to(device))
             self.PR.append(ry)
             self.PC.append(rx)
         self.GaussianKernel = torch.tensor(
@@ -22,12 +22,13 @@ class GuidedFilterHR(nn.Module):
         )
         self.GaussianKernel = (self.GaussianKernel / self.GaussianKernel.sum())[
             None, None
-        ].cuda()
+        ].to(device)
         self.GaussianKernelpadding = (
             self.GaussianKernel.shape[-2] // 2,
             self.GaussianKernel.shape[-1] // 2,
         )
         self.crop = torchvision.transforms.CenterCrop((m, n))
+        self.device = device
 
     def boxfilter(self, x, weight, k, pc, pr):
         b, c, m, n = x.shape
@@ -39,7 +40,7 @@ class GuidedFilterHR(nn.Module):
         )
         return (img * weight).sum(-1)
 
-    def generateWeight(self, y, k, pc, pr, sigma):
+    def generateWeight(self, y, k, pc, pr, sigma, device="cpu"):
         b, c, m, n = y.shape
         weight = torch.exp(
             -(
@@ -62,7 +63,7 @@ class GuidedFilterHR(nn.Module):
         d = (
             torch.exp(-d.flatten() / (k.numel() / 4) ** 2)[None, None, None, None, :]
             .repeat(b, c, m, n, 1)
-            .cuda()
+            .to(device)
         )
         validPart = (
             F.pad(torch.ones_like(y), (pr, pr, pc, pc))
@@ -99,10 +100,20 @@ class GuidedFilterHR(nn.Module):
                     yydetail[..., i[0] : i[-1] + 1],
                 )
                 weightDetail = self.generateWeight(
-                    Xdetail, self.KERNEL[0], self.PC[0], self.PR[0], sigma
+                    Xdetail,
+                    self.KERNEL[0],
+                    self.PC[0],
+                    self.PR[0],
+                    sigma,
+                    self.device,
                 )
                 weightBase = self.generateWeight(
-                    Xbase, self.KERNEL[1], self.PC[1], self.PR[1], sigma
+                    Xbase,
+                    self.KERNEL[1],
+                    self.PC[1],
+                    self.PR[1],
+                    sigma,
+                    self.device,
                 )
                 bdetail.append(
                     self.boxfilter(
@@ -174,7 +185,7 @@ class GuidedFilterHR(nn.Module):
 
 
 class BoxFilter(nn.Module):
-    def __init__(self, rx, ry, Angle):
+    def __init__(self, rx, ry, Angle, device="cpu"):
         super(BoxFilter, self).__init__()
         self.rx, self.ry = rx, ry
         if Angle != 0:
@@ -183,9 +194,11 @@ class BoxFilter(nn.Module):
             kernelx = ndimage.rotate(kernelx, Angle, reshape=False, order=1)[
                 rx : 3 * rx + 1, rx : 3 * rx + 1
             ]
-            self.kernelx = torch.from_numpy(kernelx[None, None, :, :]).float().cuda()
+            self.kernelx = (
+                torch.from_numpy(kernelx[None, None, :, :]).float().to(device)
+            )
         else:
-            self.kernelx = torch.ones(1, 1, 2 * rx + 1, 2 * ry + 1).float().cuda()
+            self.kernelx = torch.ones(1, 1, 2 * rx + 1, 2 * ry + 1).float().to(device)
         self.Angle = Angle
 
     def diff_x(self, input):
@@ -205,10 +218,12 @@ class BoxFilter(nn.Module):
 
 
 class GuidedFilterHR_fast(nn.Module):
-    def __init__(self, rx, ry, angleList, eps=1e-9):
+    def __init__(self, rx, ry, angleList, eps=1e-9, device="cpu"):
         super(GuidedFilterHR_fast, self).__init__()
         self.eps = eps
-        self.boxfilter = [BoxFilter(rx, ry, Angle=Angle) for Angle in angleList]
+        self.boxfilter = [
+            BoxFilter(rx, ry, Angle=Angle, device=device) for Angle in angleList
+        ]
         self.N = None
         self.angleList = angleList
         self.crop = None

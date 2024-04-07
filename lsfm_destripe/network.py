@@ -59,7 +59,7 @@ class ResLearning(nn.Module):
 
 
 class GuidedFilter(nn.Module):
-    def __init__(self, rx, ry, Angle, m, n, device="cuda", eps=1e-9):
+    def __init__(self, rx, ry, Angle, m, n, device="cpu", eps=1e-9):
         super().__init__()
         self.eps = eps
         self.AngleNum = len(Angle)
@@ -118,7 +118,7 @@ class GuidedFilter(nn.Module):
 
 
 class dual_view_fusion:
-    def __init__(self, r, m, n, resampleRatio, eps=1, device="cuda"):
+    def __init__(self, r, m, n, resampleRatio, eps=1, device="cpu"):
         self.r = r
         self.mask = torch.arange(m)[None, None, :, None].to(device)
         self.m, self.n = m, n
@@ -193,7 +193,7 @@ class DeStripeModel(nn.Module):
         inc=16,
         GFr=49,
         viewnum=1,
-        device="cuda",
+        device="cpu",
     ):
         super(DeStripeModel, self).__init__()
         self.hier_mask = hier_mask
@@ -287,7 +287,9 @@ class DeStripeModel(nn.Module):
             nn.Linear(inc, viewnum),
         )
         self.viewnum = viewnum
-        self.GuidedFilter = GuidedFilter(rx=KS, ry=0, m=m, n=n, Angle=Angle)
+        self.GuidedFilter = GuidedFilter(
+            rx=KS, ry=0, m=m, n=n, Angle=Angle, device=device
+        )
         self.w = nn.Parameter(torch.rand(NI.shape) + 1j * torch.rand(NI.shape))
         self.w.data = Cmplx_Xavier_Init(self.w.data)
         self.complexReLU = complexReLU()
@@ -417,22 +419,22 @@ class Loss(nn.Module):
         super(Loss, self).__init__()
         self.lambda_tv = train_params["lambda_tv"]
         self.lambda_hessian = train_params["lambda_hessian"]
-        self.angleOffset = train_params["angleOffset"]
-        self.sampling = train_params["sampling"]
-        self.f = train_params["f"]
+        self.angleOffset = shape_params["angle_offset"]
+        self.sampling = train_params["sampling_in_MSEloss"]
+        self.f = train_params["isotropic_hessian"]
         self.Dy = torch.from_numpy(
             np.array([[1], [-1]], dtype=np.float32)[None, None]
         ).to(device)
         self.Dx = torch.from_numpy(
             np.array([[1, -1]], dtype=np.float32)[None, None]
         ).to(device)
-        if train_params["HKs"] > 0.5:
+        if train_params["hessian_kernel_sigma"] > 0.5:
             self.DGaussxx, self.DGaussyy, self.DGaussxy = self.generateHessianKernel(
-                train_params["HKs"]
+                train_params["hessian_kernel_sigma"]
             )
         else:
             self.DGaussxx, self.DGaussyy, self.DGaussxy = self.generateHessianKernel2(
-                train_params["HKs"], shape_params
+                train_params["hessian_kernel_sigma"], shape_params
             )
         self.DGaussxx, self.DGaussyy, self.DGaussxy = (
             self.DGaussxx.to(device),
@@ -440,7 +442,7 @@ class Loss(nn.Module):
             self.DGaussxy.to(device),
         )
         self.GuidedFilterLoss = GuidedFilterLoss(
-            r=train_params["KGF"], eps=train_params["losseps"]
+            r=train_params["GF_kernel_size_train"], eps=train_params["loss_eps"]
         )
 
     def generateHessianKernel2(self, Sigma, shape_params):

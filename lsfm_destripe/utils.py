@@ -179,3 +179,28 @@ def global_correction(mean, result):
     result = result - mean[:, None, None] + means[:, None, None]
     result = (result - result.min()) / (result.max() - result.min()) * (MAX - MIN) + MIN
     return np.clip(result, 0, 65535).astype(np.uint16)
+
+
+def destripe_train_params(
+    loss_eps: float = 10,
+    qr: float = 0.5,
+    resample_ratio: int = 2,
+    GF_kernel_size_train: int = 29,
+    GF_kernel_size_inference: int = 29,
+    hessian_kernel_sigma: float = 0.5,
+    sampling_in_MSEloss: int = 2,
+    isotropic_hessian: bool = True,
+    lambda_tv: float = 1,
+    lambda_hessian: float = 1,
+    inc: int = 16,
+    n_epochs: int = 300,
+    wedge_degree: float = 29,
+    n_neighbors: int = 16,
+    fast_GF: bool = False,
+    fusion_GF_kernel_size: int = 49,
+    fusion_Gaussian_kernel_size: int = 49,
+    angle_offset: list = [0],
+    require_global_correction: bool = True,
+):
+    kwargs = locals()
+    return kwargs
