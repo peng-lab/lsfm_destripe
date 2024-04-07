@@ -184,7 +184,7 @@ def global_correction(mean, result):
 def destripe_train_params(
     loss_eps: float = 10,
     qr: float = 0.5,
-    resample_ratio: int = 2,
+    resample_ratio: int = 3,
     GF_kernel_size_train: int = 29,
     GF_kernel_size_inference: int = 29,
     hessian_kernel_sigma: float = 0.5,
