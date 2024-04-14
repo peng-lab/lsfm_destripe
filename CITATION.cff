@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+preferred-citation:
+  type: conference-paper
+  authors:
+  - family-names: "Liu"
+    given-names: "Yu"
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+  - family-names: ""
+    given-names: "Hew"
+    orcid: "https://orcid.org/0000-0000-0000-0000"
+  doi: "10.0000/00000"
+  month: 9
+  start: 1 # First page number
+  end: 10 # Last page number
+  title: "My awesome research software"
+  issue: 1
+  volume: 1
+  year: 2021
