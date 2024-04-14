@@ -20,6 +20,14 @@ lsfm\_destripe.core module
    :undoc-members:
    :show-inheritance:
 
+lsfm\_destripe.guided\_filter\_variant module
+---------------------------------------------
+
+.. automodule:: lsfm_destripe.guided_filter_variant
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 lsfm\_destripe.network module
 -----------------------------
 
@@ -32,6 +40,14 @@ lsfm\_destripe.utils module
 ---------------------------
 
 .. automodule:: lsfm_destripe.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+lsfm\_destripe.utils\_pytorch module
+------------------------------------
+
+.. automodule:: lsfm_destripe.utils_pytorch
    :members:
    :undoc-members:
    :show-inheritance:
