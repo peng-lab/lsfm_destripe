@@ -24,6 +24,17 @@ logging.basicConfig(
 ###############################################################################
 
 
+def list_of_floats(arg):
+    return list(map(float, arg.split(",")))
+
+
+def bool_args(arg):
+    if ("false" == arg) or ("False" == arg):
+        return False
+    elif ("true" == arg) or ("True" == arg):
+        return True
+
+
 class Args(argparse.Namespace):
 
     DEFAULT_FIRST = 10
@@ -52,24 +63,21 @@ class Args(argparse.Namespace):
 
         p.add_argument(
             "--is_vertical",
-            action="store",
-            dest="is_vertical",
-            default=True,
-            type=bool,
+            type=bool_args,
+            required=True,
         )
 
         p.add_argument(
-            "--angleOffset",
+            "--angle_offset",
+            type=list_of_floats,
             action="store",
-            dest="angleOffset",
-            default=[0],
-            type=list,
+            required=True,
         )
 
         p.add_argument(
-            "--losseps",
+            "--loss_eps",
             action="store",
-            dest="losseps",
+            dest="loss_eps",
             default=10,
             type=float,
         )
@@ -83,33 +91,33 @@ class Args(argparse.Namespace):
         )
 
         p.add_argument(
-            "--resampleRatio",
+            "--resample_ratio",
             action="store",
-            dest="resampleRatio",
-            default=2,
+            dest="resample_ratio",
+            default=3,
             type=int,
         )
 
         p.add_argument(
-            "--KGF",
+            "--GF_kernel_size_train",
             action="store",
-            dest="KGF",
+            dest="GF_kernel_size_train",
             default=29,
             type=int,
         )
 
         p.add_argument(
-            "--KGFh",
+            "--GF_kernel_size_inference",
             action="store",
-            dest="KGFh",
+            dest="GF_kernel_size_inference",
             default=29,
             type=int,
         )
 
         p.add_argument(
-            "--HKs",
+            "--hessian_kernel_sigma",
             action="store",
-            dest="HKs",
+            dest="hessian_kernel_sigma",
             default=1,
             type=float,
         )
@@ -124,10 +132,8 @@ class Args(argparse.Namespace):
 
         p.add_argument(
             "--isotropic_hessian",
-            action="store",
-            dest="isotropic_hessian",
-            default=True,
-            type=bool,
+            type=bool_args,
+            default="True",
         )
 
         p.add_argument(
@@ -146,87 +152,86 @@ class Args(argparse.Namespace):
             type=float,
         )
 
-        p.add_argument("--inc", action="store", dest="inc", default=16, type=int)
-
         p.add_argument(
-            "--n_epochs", action="store", dest="n_epochs", default=300, type=int
+            "--inc",
+            action="store",
+            dest="inc",
+            default=16,
+            type=int,
         )
 
         p.add_argument(
-            "--deg",
+            "--n_epochs",
             action="store",
-            dest="deg",
+            dest="n_epochs",
+            default=300,
+            type=int,
+        )
+
+        p.add_argument(
+            "--wedge_degree",
+            action="store",
+            dest="wedge_degree",
             default=29,
             type=float,
         )
 
         p.add_argument(
-            "--Nneighbors",
+            "--n_neighbors",
             action="store",
-            dest="Nneighbors",
+            dest="n_neighbors",
             default=16,
             type=int,
         )
 
         p.add_argument(
             "--fast_GF",
-            action="store",
-            dest="fast_GF",
-            default=False,
-            type=bool,
+            type=bool_args,
+            default="False",
         )
 
         p.add_argument(
             "--require_global_correction",
-            action="store",
-            dest="require_global_correction",
-            default=True,
-            type=bool,
+            type=bool_args,
+            default="True",
         )
 
         p.add_argument(
-            "--GFr",
+            "--fusion_GF_kernel_size",
             action="store",
-            dest="GFr",
+            dest="fusion_GF_kernel_size",
             default=49,
             type=int,
         )
 
         p.add_argument(
-            "--Gaussianr",
+            "--fusion_Gaussian_kernel_size",
             action="store",
-            dest="Gaussianr",
+            dest="fusion_Gaussian_kernel_size",
             default=49,
             type=int,
         )
 
         p.add_argument(
-            "--X1",
+            "--X1_path",
             action="store",
-            dest="X1",
+            dest="X1_path",
             type=str,
+            required=True,
         )
 
         p.add_argument(
-            "--X2",
+            "--X2_path",
             action="store",
-            dest="X2",
+            dest="X2_path",
             default=None,
             type=str,
         )
 
         p.add_argument(
-            "--mask",
+            "--mask_path",
             action="store",
-            dest="mask",
-            default=None,
-            type=str,
-        )
-
-        p.add_argument(
-            "--dualX",
-            action="store",
-            dest="dualX",
+            dest="mask_path",
             default=None,
             type=str,
         )
@@ -240,9 +245,26 @@ class Args(argparse.Namespace):
         )
 
         p.add_argument(
-            "--out_path",
+            "--save_path",
             action="store",
-            dest="out_path",
+            dest="save_path",
+            type=str,
+            required=True,
+        )
+
+        p.add_argument(
+            "--save_path_top_or_left_view",
+            action="store",
+            dest="save_path_top_or_left_view",
+            default=None,
+            type=str,
+        )
+
+        p.add_argument(
+            "--save_path_bottom_or_right_view",
+            action="store",
+            dest="save_path_bottom_or_right_view",
+            default=None,
             type=str,
         )
 
@@ -264,29 +286,51 @@ def main():
         dbg = args.debug
 
         exe = DeStripe(
-            args.is_vertical,
-            args.angleOffset,
-            args.losseps,
+            args.loss_eps,
             args.qr,
-            args.resampleRatio,
-            args.KGF,
-            args.KGFh,
-            args.HKs,
-            args.sampling_in_MSELoss,
+            args.resample_ratio,
+            args.GF_kernel_size_train,
+            args.GF_kernel_size_inference,
+            args.hessian_kernel_sigma,
+            args.sampling_in_MSEloss,
             args.isotropic_hessian,
             args.lambda_tv,
             args.lambda_hessian,
             args.inc,
             args.n_epochs,
-            args.deg,
-            args.Nneighbors,
+            args.wedge_degree,
+            args.n_neighbors,
             args.fast_GF,
             args.require_global_correction,
-            args.GFr,
-            args.Gaussianr,
+            args.fusion_GF_kernel_size,
+            args.fusion_Gaussian_kernel_size,
         )
-        out = exe.train(args.X1, args.X2, args.mask, args.dualX, args.boundary)
-        OmeTiffWriter.save(out, args.out_path, dim_order="ZYX")
+        out = exe.train(
+            args.X1_path,
+            args.is_vertical,
+            args.angle_offset,
+            args.X2_path,
+            args.mask_path,
+            args.boundary,
+        )
+        if not isinstance(out, tuple):
+            OmeTiffWriter.save(out, args.save_path, dim_order="ZYX")
+        else:
+            OmeTiffWriter.save(
+                out[0],
+                args.save_path,
+                dim_order="ZYX",
+            )
+            OmeTiffWriter.save(
+                out[1],
+                args.save_path_top_or_left_view,
+                dim_order="ZYX",
+            )
+            OmeTiffWriter.save(
+                out[2],
+                args.save_path_bottom_or_right_view,
+                dim_order="ZYX",
+            )
 
     except Exception as e:
         log.error("=============================================")
