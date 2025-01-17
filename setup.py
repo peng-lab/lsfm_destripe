@@ -8,6 +8,7 @@ from setuptools import find_packages, setup
 with open("README.md") as readme_file:
     readme = readme_file.read()
 
+
 setup_requirements = [
     "pytest-runner>=5.2",
 ]
@@ -38,12 +39,18 @@ dev_requirements = [
 ]
 
 requirements = [
+    "jax[cuda]",
     "scikit-image",
     "torch",
     "torchvision",
     "aicsimageio",
     "tqdm",
     "matplotlib",
+    "dm-haiku",
+    "SimpleITK",
+    "jaxwt",
+    "ptwt",
+    "PyWavelets",
 ]
 
 extra_requirements = {
@@ -57,22 +64,23 @@ extra_requirements = {
 }
 
 setup(
-    author="Jianxu Chen",
-    author_email="jianxu.chen@isas.de",
+    author="Yu Liu",
+    author_email="liuyu9671@gmail.com",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Natural Language :: English",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
     ],
-    description="A PyTorch implementation of LSFM DeStripe method",
+    description="DeStripe for LSFM in jax",
     entry_points={
         "console_scripts": ["destripe=lsfm_destripe.bin.run_destripe:main"],
     },
     install_requires=requirements,
+    extras_require=extra_requirements,
     license="MIT license",
     long_description=readme,
     long_description_content_type="text/markdown",
@@ -80,14 +88,13 @@ setup(
     keywords="lsfm_destripe",
     name="lsfm_destripe",
     packages=find_packages(exclude=["tests", "*.tests", "*.tests.*"]),
-    python_requires=">=3.9",
+    python_requires=">=3.7",
     setup_requires=setup_requirements,
     test_suite="lsfm_destripe/tests",
     tests_require=test_requirements,
-    extras_require=extra_requirements,
     url="https://github.com/peng-lab/lsfm_destripe",
     # Do not edit this string manually, always use bumpversion
     # Details in CONTRIBUTING.rst
-    version="0.1.0",
+    version="0.0.1",
     zip_safe=False,
 )

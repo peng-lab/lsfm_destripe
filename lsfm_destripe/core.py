@@ -1,419 +1,455 @@
-import matplotlib.pyplot as plt
-import numpy as np
-import torch
-import torch.fft as fft
-from torch.nn import functional as F
-import tqdm
-from typing import Union, List, Dict
-import dask.array as da
-from aicsimageio import AICSImage
-import dask
 import warnings
 
-from lsfm_destripe.network import DeStripeModel, GuidedFilterLoss, Loss
+warnings.filterwarnings("ignore", message="ignoring keyword argument 'read_only'")
+
+from typing import Union, Dict
+
+import numpy as np
+
+try:
+    import haiku as hk
+    import jax
+    import jax.numpy as jnp
+    from lsfm_destripe.utils_jax import (
+        initialize_cmplx_model_jax,
+        update_jax,
+        generate_mask_dict_jax,
+    )
+    from lsfm_destripe.network_jax import DeStripeModel_jax
+    from lsfm_destripe.loss_term_jax import Loss_jax
+    from jax import jit
+    import jaxwt
+
+    jax_flag = 1
+except:
+    jax_flag = 0
+
+import copy
+import tqdm
 from lsfm_destripe.utils import (
-    prepare_aux,
     global_correction,
-    fusion_perslice,
     destripe_train_params,
+    transform_cmplx_model,
+    prepare_aux,
 )
-from lsfm_destripe.guided_filter_variant import (
-    GuidedFilterHR,
-    GuidedFilterHR_fast,
-    GuidedFilter,
+import matplotlib.pyplot as plt
+from lsfm_destripe.guided_filter_upsample import GuidedUpsample
+import dask.array as da
+
+from aicsimageio import AICSImage
+import torch
+
+from lsfm_destripe.network_torch import DeStripeModel_torch
+from lsfm_destripe.loss_term_torch import Loss_torch
+from lsfm_destripe.utils_torch import (
+    update_torch,
+    generate_mask_dict_torch,
+    initialize_cmplx_model_torch,
 )
-from lsfm_destripe.utils_pytorch import cADAM
-
-
-def setup_seed(seed):
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
-    np.random.seed(seed)
-    torch.backends.cudnn.deterministic = True
 
 
 class DeStripe:
     def __init__(
         self,
-        loss_eps: float = 10,
-        qr: float = 0.5,
         resample_ratio: int = 3,
-        GF_kernel_size_train: int = 29,
-        GF_kernel_size_inference: int = 29,
+        guided_upsample_kernel: int = 49,
         hessian_kernel_sigma: float = 1,
-        sampling_in_MSEloss: int = 2,
-        isotropic_hessian: bool = True,
+        lambda_masking_mse: int = 1,
         lambda_tv: float = 1,
         lambda_hessian: float = 1,
         inc: int = 16,
         n_epochs: int = 300,
         wedge_degree: float = 29,
         n_neighbors: int = 16,
-        fast_GF: bool = False,
-        require_global_correction: bool = True,
-        fusion_GF_kernel_size: int = 49,
-        fusion_Gaussian_kernel_size: int = 49,
+        backend: str = "jax",
         device: str = None,
     ):
         self.train_params = {
-            "fast_GF": fast_GF,
-            "GF_kernel_size_train": GF_kernel_size_train,
-            "GF_kernel_size_inference": GF_kernel_size_inference,
-            "loss_eps": loss_eps,
+            "gf_kernel_size": guided_upsample_kernel,
             "n_neighbors": n_neighbors,
             "inc": inc,
             "hessian_kernel_sigma": hessian_kernel_sigma,
             "lambda_tv": lambda_tv,
             "lambda_hessian": lambda_hessian,
-            "sampling_in_MSEloss": sampling_in_MSEloss,
+            "lambda_masking_mse": lambda_masking_mse,
             "resample_ratio": resample_ratio,
-            "isotropic_hessian": isotropic_hessian,
             "n_epochs": n_epochs,
             "wedge_degree": wedge_degree,
-            "qr": qr,
-            "fusion_GF_kernel_size": fusion_GF_kernel_size,
-            "fusion_Gaussian_kernel_size": fusion_Gaussian_kernel_size,
-            "require_global_correction": require_global_correction,
         }
         if device is None:
             self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         else:
             self.device = device
+        self.backend = backend
+        if jax_flag == 0:
+            if self.backend == "jax":
+                print("jax is not available on the current machine, use torch instead.")
+            self.backend = "torch"
 
     @staticmethod
     def train_on_one_slice(
         GuidedFilterHRModel,
+        update_method,
         sample_params: Dict,
         train_params: Dict,
         X: np.ndarray,
         mask: np.ndarray = None,
-        boundary: np.ndarray = None,
+        fusion_mask: np.ndarray = None,
         s_: int = 1,
         z: int = 1,
-        device: str = "cpu",
+        backend: str = "jax",
     ):
+        rng_seq = jax.random.PRNGKey(0) if backend == "jax" else None
         md = (
             sample_params["md"] if sample_params["is_vertical"] else sample_params["nd"]
         )
         nd = (
             sample_params["nd"] if sample_params["is_vertical"] else sample_params["md"]
         )
-        if sample_params["view_num"] > 1:
-            assert X.shape[1] == 2, print("input X must have 2 channels.")
-            assert isinstance(boundary, np.ndarray), print(
-                "dual-view fusion boundary is missing."
-            )
-            boundary = torch.from_numpy(boundary).to(device)
-            kernel = torch.ones(
-                1,
-                1,
-                train_params["fusion_Gaussian_kernel_size"],
-                train_params["fusion_Gaussian_kernel_size"],
-            ).to(device) / (train_params["fusion_Gaussian_kernel_size"] ** 2)
-            dualtarget_numpy = fusion_perslice(
-                GuidedFilter(r=train_params["fusion_GF_kernel_size"], eps=1),
-                GuidedFilter(r=9, eps=1e-6),
-                10 ** X[:, :1, :, :],
-                10 ** X[:, 1:, :, :],
-                train_params["fusion_Gaussian_kernel_size"],
-                kernel,
-                boundary,
-                device=device,
-            )
-            dualtarget = torch.from_numpy(
-                np.log10(dualtarget_numpy[None, None, :, :])
-            ).to(device)
-        X, mask = torch.from_numpy(X).to(device), torch.from_numpy(mask).to(device)
-        # downsample
-        Xd = []
-        for ind in range(X.shape[1]):
-            Xd.append(
-                F.interpolate(
-                    X[:, ind : ind + 1, :, :],
-                    (md, nd),
-                    align_corners=True,
-                    mode="bilinear",
-                )
-            )
-        Xd = torch.cat(Xd, 1)
-        if sample_params["view_num"] > 1:
-            dualtargetd = F.interpolate(
-                dualtarget, (md, nd), align_corners=True, mode="bilinear"
-            )
-        mask = F.interpolate(
-            mask.float(), (md, nd), align_corners=True, mode="bilinear"
-        )
-        mask = (mask > 0).float()
+        target = (X * fusion_mask).sum(1, keepdims=True)
+        targetd = target[:, :, :: sample_params["r"], :]
+
+        Xd = X[:, :, :: sample_params["r"], :]
+        fusion_maskd = fusion_mask[:, :, :: sample_params["r"], :]
+
         # to Fourier
-        Xf = (
-            fft.fftshift(fft.fft2(Xd))
-            .reshape(1, Xd.shape[1], -1)[0]
-            .transpose(1, 0)[: md * nd // 2, :]
-        )
+        if backend == "jax":
+            targetf = (
+                jnp.fft.fftshift(jnp.fft.fft2(targetd), axes=(-2, -1))
+                .reshape(1, targetd.shape[1], -1)[0]
+                .transpose(1, 0)[: md * nd // 2, :][..., None]
+            )
+        else:
+            targetf = (
+                torch.fft.fftshift(torch.fft.fft2(targetd), dim=(-2, -1))
+                .reshape(1, targetd.shape[1], -1)[0]
+                .transpose(1, 0)[: md * nd // 2, :][..., None]
+            )
+
         # initialize
-        hier_mask, hier_ind, NI = (
-            torch.from_numpy(train_params["hier_mask"]).to(device),
-            torch.from_numpy(train_params["hier_ind"]).to(device),
-            torch.from_numpy(train_params["NI"]).to(device),
+        generate_mask_dict_func = (
+            generate_mask_dict_jax if backend == "jax" else generate_mask_dict_torch
         )
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore")
-            network = DeStripeModel(
-                Angle=sample_params["angle_offset"],
-                hier_mask=hier_mask,
-                hier_ind=hier_ind,
-                NI=NI,
-                KS=train_params["GF_kernel_size_train"],
-                inc=train_params["inc"],
-                m=md,
-                n=nd,
-                resampleRatio=train_params["resample_ratio"],
-                GFr=train_params["fusion_GF_kernel_size"],
-                viewnum=sample_params["view_num"],
-                device=device,
-            ).to(device)
-        optimizer = cADAM(network.parameters(), lr=0.01)
-        smoothedTarget = GuidedFilterLoss(
-            r=train_params["GF_kernel_size_train"], eps=train_params["loss_eps"]
-        )(Xd, Xd)
-        loss = Loss(train_params, sample_params, device).to(device)
+        mask_dict, targets_f, targetd_bilinear = generate_mask_dict_func(
+            targetd,
+            target,
+            fusion_maskd,
+            update_method.loss.Dx,
+            update_method.loss.Dy,
+            update_method.loss.DGaussxx,
+            update_method.loss.DGaussyy,
+            update_method.loss.p_tv,
+            update_method.loss.p_hessian,
+            train_params,
+            sample_params,
+        )
+
+        aver = targetd.sum((2, 3))
+
+        initialize_cmplx_model = (
+            initialize_cmplx_model_jax
+            if backend == "jax"
+            else initialize_cmplx_model_torch
+        )
+
+        net_params = initialize_cmplx_model(
+            update_method._network,
+            rng_seq,
+            {
+                "aver": aver,
+                "Xf": targetf,
+                "target": targetd,
+                "target_hr": target,
+                "coor": mask_dict["coor"],
+            },
+        )
+
+        opt_state = update_method.opt_init(net_params)
+
+        mask_dict.update(
+            {
+                "mse_mask": mask[:, :, :: sample_params["r"], :],
+            }
+        )
+
         for epoch in tqdm.tqdm(
             range(train_params["n_epochs"]),
-            leave=False if (s_ != z) else True,
+            leave=False,
             desc="for {} ({} slices in total): ".format(s_, z),
         ):
-            optimizer.zero_grad()
-            Y_raw, Y_GNN, Y_LR = network(
-                Xd, Xf, Xd if sample_params["view_num"] == 1 else dualtargetd, boundary
+            l, net_params, opt_state, Y_raw = update_method(
+                epoch,
+                net_params,
+                opt_state,
+                aver,
+                targetf,
+                targetd,
+                mask_dict,
+                target,
+                targets_f,
+                targetd_bilinear,
             )
-            epoch_loss = loss(
-                Y_raw,
-                Y_GNN,
-                Y_LR,
-                smoothedTarget,
-                Xd if sample_params["view_num"] == 1 else dualtargetd,
-                mask,
-            )  # Xd, X
-            epoch_loss.backward()
-            optimizer.step()
-        with torch.no_grad():
-            m, n = X.shape[-2:]
-            resultslice = np.zeros(X.shape, dtype=np.float32)
-            if not train_params["fast_GF"]:
-                for index in range(X.shape[1]):
-                    input2 = X[:, index : index + 1, :, :]
-                    input1 = F.interpolate(
-                        Y_raw[:, index : index + 1, :, :],
-                        (m, n),
-                        align_corners=True,
-                        mode="bilinear",
-                    )
-                    input1, input2 = torch.from_numpy(input1.cpu().data.numpy()).to(
-                        device
-                    ), torch.from_numpy(input2.cpu().data.numpy()).to(device)
-                    resultslice[:, index : index + 1, :, :] = (
-                        10
-                        ** GuidedFilterHRModel(input2, input1, r=train_params["qr"])
-                        .cpu()
-                        .data.numpy()
-                    )
-                if X.shape[1] > 1:
-                    Y = fusion_perslice(
-                        GuidedFilter(r=train_params["fusion_GF_kernel_size"], eps=1),
-                        GuidedFilter(r=9, eps=1e-6),
-                        resultslice[:, :1, :, :],
-                        resultslice[:, 1:, :, :],
-                        train_params["fusion_Gaussian_kernel_size"],
-                        kernel,
-                        boundary,
-                        device=device,
-                    )
-                else:
-                    Y = resultslice[0, 0]
-            else:
-                for index in range(X.shape[1]):
-                    resultslice[:, index : index + 1, :, :] = (
-                        10
-                        ** GuidedFilterHRModel(
-                            Xd[:, index : index + 1, :, :],
-                            Y_raw[:, index : index + 1, :, :],
-                            X[:, index : index + 1, :, :],
-                        )
-                        .cpu()
-                        .data.numpy()[0, 0]
-                    )
-                if X.shape[1] > 1:
-                    Y = fusion_perslice(
-                        GuidedFilter(r=train_params["fusion_GF_kernel_size"], eps=1),
-                        GuidedFilter(r=9, eps=1e-6),
-                        resultslice[:, :1, :, :],
-                        resultslice[:, 1:, :, :],
-                        train_params["fusion_Gaussian_kernel_size"],
-                        kernel,
-                        boundary,
-                        device=device,
-                    )
-                else:
-                    Y = resultslice[0, 0]
-            return (
-                Y,
-                resultslice[0] if sample_params["view_num"] > 1 else None,
-                dualtarget_numpy if sample_params["view_num"] > 1 else None,
-            )
+
+        Y = GuidedFilterHRModel(
+            Y_raw,
+            X,
+            targetd,
+            target,
+            mask_dict["coor"],
+            fusion_mask,
+            sample_params["angle_offset_individual"],
+            backend=backend,
+        )
+        return Y[0, 0], (
+            10 ** np.asarray(target[0, 0])
+            if backend == "jax"
+            else 10 ** target[0, 0].cpu().data.numpy()
+        )
 
     @staticmethod
     def train_on_full_arr(
-        X: Union[np.ndarray, dask.array.core.Array],
+        X: Union[np.ndarray, da.core.Array],
         is_vertical: bool,
-        angle_offset: List,
-        mask: Union[np.ndarray, dask.array.core.Array],
+        angle_offset_dict: Dict,
+        mask: Union[np.ndarray, da.core.Array],
         train_params: Dict = None,
-        boundary: np.ndarray = None,
+        fusion_mask: Union[np.ndarray, da.core.Array] = None,
         display: bool = False,
         device: str = "cpu",
+        non_positive: bool = False,
+        backend: str = "jax",
+        flag_compose: bool = False,
+        display_angle_orientation: bool = True,
     ):
-        sample_params = {
-            "is_vertical": is_vertical,
-            "angle_offset": angle_offset,
-        }
         if train_params is None:
             train_params = destripe_train_params()
         else:
             train_params = destripe_train_params(**train_params)
-        setup_seed(0)
-        z, view_num, m, n = X.shape
-        result = np.zeros((z, m, n), dtype=np.uint16)
+        angle_offset = []
+        for key, item in angle_offset_dict.items():
+            angle_offset = angle_offset + item
+        angle_offset = list(set(angle_offset))
+        angle_offset_individual = []
+        if flag_compose:
+            for i in range(len(angle_offset_dict)):
+                angle_offset_individual.append(
+                    angle_offset_dict["angle_offset_{}".format(i)]
+                )
+        else:
+            angle_offset_individual.append(angle_offset_dict["angle_offset"])
+
+        r = copy.deepcopy(train_params["resample_ratio"])
+        sample_params = {
+            "is_vertical": is_vertical,
+            "angle_offset": angle_offset,
+            "angle_offset_individual": angle_offset_individual,
+            "r": r,
+            "non_positive": non_positive,
+        }
+        z, _, m, n = X.shape
+        result = copy.deepcopy(X[:, 0, :, :])
         mean = np.zeros(z)
-        sample_params["view_num"] = view_num
-        sample_params["md"], sample_params["nd"] = (
-            m // train_params["resample_ratio"] // 2 * 2 + 1,
-            n // train_params["resample_ratio"] // 2 * 2 + 1,
-        )
+        if sample_params["is_vertical"]:
+            n = n if n % 2 == 1 else n - 1
+            m = m // train_params["resample_ratio"]
+            if m % 2 == 0:
+                m = m - 1
+            m = m * train_params["resample_ratio"]
+        else:
+            m = m if m % 2 == 1 else m - 1
+            n = n // train_params["resample_ratio"]
+            if n % 2 == 0:
+                n = n - 1
+            n = n * train_params["resample_ratio"]
+        sample_params["m"], sample_params["n"] = m, n
+        if sample_params["is_vertical"]:
+            sample_params["md"], sample_params["nd"] = (
+                m // train_params["resample_ratio"],
+                n,
+            )
+        else:
+            sample_params["md"], sample_params["nd"] = (
+                m,
+                n // train_params["resample_ratio"],
+            )
+
         hier_mask_arr, hier_ind_arr, NI_arr = prepare_aux(
             sample_params["md"],
             sample_params["nd"],
             sample_params["is_vertical"],
-            sample_params["angle_offset"],
+            np.rad2deg(
+                np.arctan(r * np.tan(np.deg2rad(sample_params["angle_offset"])))
+            ),
             train_params["wedge_degree"],
             train_params["n_neighbors"],
+            backend=backend,
         )
-        train_params["NI"] = NI_arr
-        train_params["hier_mask"] = hier_mask_arr
-        train_params["hier_ind"] = hier_ind_arr
-        if sample_params["view_num"] > 1:
-            result_view1, result_view2 = np.zeros((z, m, n), dtype=np.uint16), np.zeros(
-                (z, m, n), dtype=np.uint16
+        if display_angle_orientation:
+            print("Please check the orientation of the stripes...")
+            fig, ax = plt.subplots(
+                1, 2 if not flag_compose else len(angle_offset_individual), dpi=200
             )
-            mean_view1, mean_view2 = np.zeros(z), np.zeros(z)
-        if train_params["fast_GF"]:
-            GuidedFilterHRModel = GuidedFilterHR_fast(
-                rx=train_params["GF_kernel_size_inference"],
-                ry=0,
-                angleList=sample_params["angle_offset"],
-                eps=1e-9,
-                device=device,
+            if not flag_compose:
+                ax[1].set_visible(False)
+            for i in range(len(angle_offset_individual)):
+                demo_img = X[z // 2, :, :, :]
+                demo_m, demo_n = demo_img.shape[-2:]
+                if not sample_params["is_vertical"]:
+                    (demo_m, demo_n) = (demo_n, demo_m)
+                ax[i].imshow(demo_img[i, :].compute() + 1.0)
+                for deg in sample_params["angle_offset_individual"][i]:
+                    d = np.tan(np.deg2rad(deg)) * demo_m
+                    p0 = [0 + demo_n // 2 - d // 2, d + demo_n // 2 - d // 2]
+                    p1 = [0, demo_m - 1]
+                    if not sample_params["is_vertical"]:
+                        (p0, p1) = (p1, p0)
+                    ax[i].plot(p0, p1, "r")
+                ax[i].axis("off")
+            plt.show()
+
+        GuidedFilterHRModel = GuidedUpsample(
+            rx=train_params["gf_kernel_size"],
+            device=device,
+        )
+
+        network = transform_cmplx_model(
+            model=DeStripeModel_jax if backend == "jax" else DeStripeModel_torch,
+            inc=train_params["inc"],
+            m_l=(
+                sample_params["md"]
+                if sample_params["is_vertical"]
+                else sample_params["nd"]
+            ),
+            n_l=(
+                sample_params["nd"]
+                if sample_params["is_vertical"]
+                else sample_params["md"]
+            ),
+            Angle=sample_params["angle_offset"],
+            NI=NI_arr,
+            hier_mask=hier_mask_arr,
+            hier_ind=hier_ind_arr,
+            r=sample_params["r"],
+            backend=backend,
+            device=device,
+        )
+
+        train_params.update(
+            {
+                "max_pool_kernel_size": (
+                    n // 20 * 2 + 1 if sample_params["is_vertical"] else m // 20 * 2 + 1
+                )
+            }
+        )
+        if backend == "jax":
+            update_method = update_jax(
+                network,
+                Loss_jax(train_params, sample_params),
+                0.01,
             )
         else:
-            GuidedFilterHRModel = GuidedFilterHR(
-                rX=[
-                    train_params["GF_kernel_size_inference"] * 2 + 1,
-                    train_params["GF_kernel_size_inference"],
-                ],
-                rY=[0, 0],
-                m=(m if sample_params["is_vertical"] else n),
-                n=(n if sample_params["is_vertical"] else m),
-                Angle=sample_params["angle_offset"],
-                device=device,
+            update_method = update_torch(
+                network,
+                Loss_torch(train_params, sample_params).to(device),
+                0.01,
             )
+
         for i in range(z):
-            Ov = np.log10(np.clip(np.asarray(X[i : i + 1]), 1, None))  # (1, v, m, n)
-            mask_slice = np.asarray(mask[i : i + 1])[None]
-            boundary_slice = (
-                boundary[None, None, i : i + 1, :] if boundary is not None else None
-            )
+            input = np.log10(np.clip(np.asarray(X[i : i + 1])[:, :, :m, :n], 1, None))
+            mask_slice = np.asarray(mask[i : i + 1, :m, :n])[None]
+            if flag_compose:
+                fusion_mask_slice = np.asarray(fusion_mask[i : i + 1])[:, :, :m, :n]
+            else:
+                fusion_mask_slice = np.ones(input.shape, dtype=np.float32)
+
             if not sample_params["is_vertical"]:
-                Ov, mask_slice = Ov.transpose(0, 1, 3, 2), mask_slice.transpose(
-                    0, 1, 3, 2
-                )
-            Y, resultslice, dualtarget_numpy = DeStripe.train_on_one_slice(
+                input = input.transpose(0, 1, 3, 2)
+                mask_slice = mask_slice.transpose(0, 1, 3, 2)
+                fusion_mask_slice = fusion_mask_slice.transpose(0, 1, 3, 2)
+            if backend == "jax":
+                input = jnp.asarray(input)
+                mask_slice = jnp.asarray(mask_slice)
+                fusion_mask_slice = jnp.asarray(fusion_mask_slice)
+            else:
+                input = torch.from_numpy(input).to(device)
+                mask_slice = torch.from_numpy(mask_slice).to(device)
+                fusion_mask_slice = torch.from_numpy(fusion_mask_slice).to(device)
+
+            Y, target = DeStripe.train_on_one_slice(
                 GuidedFilterHRModel,
+                update_method,
                 sample_params,
                 train_params,
-                Ov,
+                input,
                 mask_slice,
-                boundary_slice,
+                fusion_mask_slice,
                 i + 1,
                 z,
-                device=device,
+                backend=backend,
             )
+
             if not sample_params["is_vertical"]:
                 Y = Y.T
-                if sample_params["view_num"] > 1:
-                    resultslice = resultslice.transpose(0, 2, 1)
-                    dualtarget_numpy = dualtarget_numpy.T
+                target = target.T
+
             if display:
                 plt.figure(dpi=300)
                 ax = plt.subplot(1, 2, 2)
-                plt.imshow(Y, vmin=10 ** Ov.min(), vmax=10 ** Ov.max(), cmap="gray")
+                plt.imshow(Y, vmin=Y.min(), vmax=Y.max(), cmap="gray")
                 ax.set_title("output", fontsize=8, pad=1)
                 plt.axis("off")
                 ax = plt.subplot(1, 2, 1)
-                plt.imshow(
-                    dualtarget_numpy if sample_params["view_num"] > 1 else X[i, 0],
-                    vmin=10 ** Ov.min(),
-                    vmax=10 ** Ov.max(),
-                    cmap="gray",
-                )
+                plt.imshow(target, vmin=Y.min(), vmax=Y.max(), cmap="gray")
                 ax.set_title("input", fontsize=8, pad=1)
                 plt.axis("off")
                 plt.show()
-            result[i] = np.clip(Y, 0, 65535).astype(np.uint16)
+            result[i:, : Y.shape[0], : Y.shape[1]] = np.clip(Y, 0, 65535).astype(
+                np.uint16
+            )
             mean[i] = np.mean(result[i] + 0.1)
-            if sample_params["view_num"] > 1:
-                result_view1[i] = np.clip(resultslice[:1, :, :], 0, 65535).astype(
-                    np.uint16
-                )
-                result_view2[i] = np.clip(resultslice[1:, :, :], 0, 65535).astype(
-                    np.uint16
-                )
-                mean_view1[i] = np.mean(result_view1[i] + 0.1)
-                mean_view2[i] = np.mean(result_view2[i] + 0.1)
-        if train_params["require_global_correction"] and (z != 1):
+
+        if (z != 1) and (not sample_params["non_positive"]):
             print("global correcting...")
             result = global_correction(mean, result)
-            if sample_params["view_num"] > 1:
-                result_view1, result_view2 = global_correction(
-                    mean_view1, result_view1
-                ), global_correction(mean_view2, result_view2)
         print("Done")
-        if sample_params["view_num"] == 2:
-            return result, result_view1, result_view2
-        else:
-            return result
+        return result
 
     def train(
         self,
-        X1: Union[str, np.ndarray, dask.array.core.Array],
         is_vertical: bool,
-        angle_offset: List,
-        X2: Union[str, np.ndarray, dask.array.core.Array] = None,
-        mask: Union[str, np.ndarray, dask.array.core.Array] = None,
-        boundary: Union[str, np.ndarray] = None,
+        x: Union[str, np.ndarray, da.core.Array] = None,
+        mask: Union[str, np.ndarray, da.core.Array] = None,
+        fusion_mask: Union[da.core.Array, np.ndarray] = None,
         display: bool = False,
+        display_angle_orientation: bool = False,
+        non_positive: bool = False,
+        **kwargs,
     ):
-        # read in X
-        X1_handle = AICSImage(X1)
-        X1_data = X1_handle.get_image_dask_data("ZYX", T=0, C=0)
-        if X2 is not None:
-            X2_handle = AICSImage(X2)
-            X2_data = X2_handle.get_image_dask_data("ZYX", T=0, C=0)
-        X = (
-            da.stack([X1_data, X2_data], 1)
-            if X2 is not None
-            else da.stack([X1_data], 1)
-        )
-        view_num = X.shape[1]
+        if x is not None:
+            print("Start DeStripe...\n")
+            flag_compose = False
+            X_handle = AICSImage(x)
+            X = X_handle.get_image_dask_data("ZYX", T=0, C=0)[:, None, ...]
+        else:
+            print("Start DeStripe-FUSE...\n")
+            if fusion_mask is None:
+                print("fusion_mask cannot be missing.")
+                return
+            flag_compose = True
+            X_data = []
+            for key, item in kwargs.items():
+                if key.startswith("x_"):
+                    X_handle = AICSImage(item)
+                    X_data.append(X_handle.get_image_dask_data("ZYX", T=0, C=0))
+            X = da.stack(X_data, 1)
+
+        angle_offset_dict = {}
+        for key, item in kwargs.items():
+            if key.startswith("angle_offset"):
+                angle_offset_dict.update({key: item})
+
         z, _, m, n = X.shape
+
         # read in mask
         if mask is None:
             mask_data = np.zeros((z, m, n), dtype=bool)
@@ -424,24 +460,39 @@ class DeStripe:
                 "mask should be of same shape as input volume(s)."
             )
         # read in dual-result, if applicable
-        if view_num > 1:
-            assert not isinstance(boundary, type(None)), print(
-                "dual-view fusion boundary is missing."
+        if flag_compose:
+            assert not isinstance(fusion_mask, type(None)), print(
+                "fusion mask is missing."
             )
-            if isinstance(boundary, str):
-                boundary = np.load(boundary)
-            assert boundary.shape == (z, n) if is_vertical else (z, m), print(
-                "boundary index should be of shape [z_slices, n columns]."
+            if fusion_mask.ndim == 3:
+                fusion_mask = fusion_mask[None]
+            assert (
+                (fusion_mask.shape[0] == z)
+                and (fusion_mask.shape[2] == m)
+                and (fusion_mask.shape[3] == n)
+            ), print(
+                "fusion mask should be of shape [z_slices, ..., m rows, n columns]."
             )
+            assert X.shape[1] == fusion_mask.shape[1], print(
+                "inputs should be {} in total.".format(fusion_mask.shape[1])
+            )
+            assert len(angle_offset_dict) == fusion_mask.shape[1], print(
+                "angle offsets should be {} in total.".format(fusion_mask.shape[1])
+            )
+
         # training
         out = self.train_on_full_arr(
             X,
             is_vertical,
-            angle_offset,
+            angle_offset_dict,
             mask_data,
             self.train_params,
-            boundary,
+            fusion_mask,
             display=display,
             device=self.device,
+            non_positive=non_positive,
+            backend=self.backend,
+            flag_compose=flag_compose,
+            display_angle_orientation=display_angle_orientation,
         )
         return out
