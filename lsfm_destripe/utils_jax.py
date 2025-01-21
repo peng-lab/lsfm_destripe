@@ -7,8 +7,6 @@ from functools import partial
 from jax import jit, value_and_grad
 import math
 import SimpleITK as sitk
-import copy
-from typing import List
 
 
 def generate_mask_dict_jax(

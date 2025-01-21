@@ -12,13 +12,13 @@ class GuidedFilter(nn.Module):
         Angle = np.rad2deg(np.arctan(r * np.tan(np.deg2rad(Angle))))
         self.pr, self.pc = [], []
         for ind, A in enumerate(Angle):
-            l = np.arange(rx) - rx // 2
-            l = np.round(l * np.tan(np.deg2rad(A))).astype(np.int32)
-            ry = (l.max() - l.min()) // 2 * 2 + 1
+            lval = np.arange(rx) - rx // 2
+            lval = np.round(lval * np.tan(np.deg2rad(A))).astype(np.int32)
+            ry = (lval.max() - lval.min()) // 2 * 2 + 1
             i, j = np.meshgrid(np.arange(ry), np.arange(rx))
             i = i - ry // 2
             j = j - rx // 2
-            kernel = (i == l[:, None]).astype(np.float32)[None, None]
+            kernel = (i == lval[:, None]).astype(np.float32)[None, None]
             self.register_buffer("kernel" + str(ind), torch.from_numpy(kernel))
             self.pr.append(kernel.shape[-1] // 2)
             self.pc.append(kernel.shape[-2] // 2)

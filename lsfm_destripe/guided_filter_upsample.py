@@ -8,7 +8,8 @@ import torch.nn.functional as F
 
 try:
     import jax
-except:
+except Exception as e:
+    print(f"Error: {e}. Proceed without jax")
     pass
 
 
@@ -28,7 +29,7 @@ def wave_rec(
     x_base_dict = [y_dict[0]]
 
     mask_dict = []
-    for l, (detail, target) in enumerate(zip(y_dict[1:], X_dict[1:])):
+    for ll, (detail, target) in enumerate(zip(y_dict[1:], X_dict[1:])):
         mask_dict.append(
             [
                 torch.abs(detail[0]) < torch.abs(target[0]),
@@ -37,7 +38,7 @@ def wave_rec(
             ]
         )
 
-    for l, (detail, target, mask) in enumerate(zip(y_dict[1:], X_dict[1:], mask_dict)):
+    for ll, (detail, target, mask) in enumerate(zip(y_dict[1:], X_dict[1:], mask_dict)):
         if mode == 1:
             x_base_dict.append(
                 WaveletDetailTuple2d(
@@ -157,13 +158,13 @@ class GuidedUpsample:
         for i, Angle in enumerate((-1 * np.array(angle_list)).tolist()):
             b = yy - hX
             rx = self.rx  # // 3 // 2 * 2 + 1
-            l = np.arange(rx) - rx // 2
-            l = np.round(l * np.tan(np.deg2rad(-Angle))).astype(np.int32)
+            lval = np.arange(rx) - rx // 2
+            lval = np.round(lval * np.tan(np.deg2rad(-Angle))).astype(np.int32)
             b_batch = torch.zeros(rx, 1, 1, m, n)
             for ind, r in enumerate(range(rx)):
-                data = F.pad(b, (l.max(), l.max(), rx // 2, rx // 2), "reflect")
+                data = F.pad(b, (lval.max(), lval.max(), rx // 2, rx // 2), "reflect")
                 b_batch[ind] = data[
-                    :, :, r : r + m, l[ind] - l.min() : l[ind] - l.min() + n
+                    :, :, r : r + m, lval[ind] - lval.min() : lval[ind] - lval.min() + n
                 ].cpu()
             b = torch.median(b_batch, 0)[0]
 

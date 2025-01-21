@@ -198,13 +198,13 @@ class GuidedFilterJAX(hk.Module):
         Angle = np.rad2deg(np.arctan(r * np.tan(np.deg2rad(Angle))))
         self.kernelL = []
         for A in Angle:
-            l = np.arange(rx) - rx // 2
-            l = np.round(l * np.tan(np.deg2rad(A))).astype(np.int32)
-            ry = (l.max() - l.min()) // 2 * 2 + 1
+            lval = np.arange(rx) - rx // 2
+            lval = np.round(lval * np.tan(np.deg2rad(A))).astype(np.int32)
+            ry = (lval.max() - lval.min()) // 2 * 2 + 1
             i, j = jnp.meshgrid(jnp.arange(ry), jnp.arange(rx))
             i = i - ry // 2
             j = j - rx // 2
-            kernel = (i == l[:, None]).astype(jnp.float32)[None, None]
+            kernel = (i == lval[:, None]).astype(jnp.float32)[None, None]
 
             self.kernelL.append(kernel)
         self.AngleNum = len(Angle)

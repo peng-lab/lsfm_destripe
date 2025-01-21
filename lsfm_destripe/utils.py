@@ -7,7 +7,8 @@ try:
     import jax.numpy as jnp
     import jax
     from lsfm_destripe.utils_jax import generate_mapping_coordinates
-except:
+except Exception as e:
+    print(f"Error: {e}. Proceed without jax")
     pass
 
 import math
@@ -243,7 +244,7 @@ def prepare_aux(
 
     angleMask = angleMask[None]
     angleMask = angleMask.reshape(angleMask.shape[0], -1)[:, : md * nd // 2]
-    hier_mask = dep_package.where(angleMask == 1)[1]  ##(3, N)
+    hier_mask = dep_package.where(angleMask == 1)[1]  # (3, N)
 
     hier_ind = dep_package.argsort(
         dep_package.concatenate(

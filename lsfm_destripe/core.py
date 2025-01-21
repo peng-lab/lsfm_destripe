@@ -7,7 +7,7 @@ from typing import Union, Dict
 import numpy as np
 
 try:
-    import haiku as hk
+    # import haiku as hk
     import jax
     import jax.numpy as jnp
     from lsfm_destripe.utils_jax import (
@@ -17,11 +17,12 @@ try:
     )
     from lsfm_destripe.network_jax import DeStripeModel_jax
     from lsfm_destripe.loss_term_jax import Loss_jax
-    from jax import jit
-    import jaxwt
+    # from jax import jit
+    # import jaxwt
 
     jax_flag = 1
-except:
+except Exception as e:
+    print(f"Error: {e}. process without jax")
     jax_flag = 0
 
 import copy
@@ -109,7 +110,7 @@ class DeStripe:
         target = (X * fusion_mask).sum(1, keepdims=True)
         targetd = target[:, :, :: sample_params["r"], :]
 
-        Xd = X[:, :, :: sample_params["r"], :]
+        # Xd = X[:, :, :: sample_params["r"], :]
         fusion_maskd = fusion_mask[:, :, :: sample_params["r"], :]
 
         # to Fourier

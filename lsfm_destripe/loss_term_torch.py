@@ -536,11 +536,11 @@ class Loss_torch(nn.Module):
         mse = self.main_loss(targets, outputGNNraw_original)
 
         kernel = pywt.Wavelet("db4")
-        l = 6
+        lconst = 6
 
         output_att_dict = [ptwt.wavedec2(output_att, kernel, level=1, mode="reflect")]
 
-        for _ in range(l - 1):
+        for _ in range(lconst - 1):
             output_att_dict.append(
                 ptwt.wavedec2(output_att_dict[-1][0], kernel, level=1, mode="reflect")
             )
@@ -548,7 +548,7 @@ class Loss_torch(nn.Module):
         output_gnn_hr_dict = [
             ptwt.wavedec2(outputGNNraw_full, kernel, level=1, mode="reflect")
         ]
-        for _ in range(l - 1):
+        for _ in range(lconst - 1):
             output_gnn_hr_dict.append(
                 ptwt.wavedec2(
                     output_gnn_hr_dict[-1][0],
@@ -558,7 +558,7 @@ class Loss_torch(nn.Module):
                 )
             )
 
-        for i in range(l):
+        for i in range(lconst):
             mse = mse + 20 * torch.sum(
                 torch.abs(output_att_dict[i][1][0] - output_gnn_hr_dict[i][1][0])
             )

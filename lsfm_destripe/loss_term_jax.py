@@ -536,8 +536,8 @@ class Loss_jax:
 
         mse = self.main_loss(targets, outputGNNraw_original)
         output_att_dict = [jaxwt.wavedec2(output_att, "db4", level=1, mode="reflect")]
-        l = 6
-        for _ in range(l - 1):
+        lconst = 6
+        for _ in range(lconst - 1):
             output_att_dict.append(
                 jaxwt.wavedec2(output_att_dict[-1][0], "db4", level=1, mode="reflect")
             )
@@ -545,14 +545,14 @@ class Loss_jax:
         output_gnn_hr_dict = [
             jaxwt.wavedec2(outputGNNraw_full, "db4", level=1, mode="reflect")
         ]
-        for _ in range(l - 1):
+        for _ in range(lconst - 1):
             output_gnn_hr_dict.append(
                 jaxwt.wavedec2(
                     output_gnn_hr_dict[-1][0], "db4", level=1, mode="reflect"
                 )
             )
 
-        for i in range(l):
+        for i in range(lconst):
             mse = mse + 20 * jnp.sum(
                 jnp.abs(output_att_dict[i][1][0] - output_gnn_hr_dict[i][1][0])
             )
